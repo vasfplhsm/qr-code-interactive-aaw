@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antibiotic Awareness Week — Admin</title>
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <main class="admin-page">
+    <section id="loginSection" class="login-section">
+      <h1>Admin sign in</h1>
+      <p class="sub">Sign in with the admin account created in Firebase Authentication.</p>
+      <form id="loginForm">
+        <label for="emailInput">Email</label>
+        <input type="email" id="emailInput" autocomplete="username" required>
+        <label for="passwordInput">Password</label>
+        <input type="password" id="passwordInput" autocomplete="current-password" required>
+        <p id="loginError" class="error-msg" role="alert"></p>
+        <button type="submit" class="btn-primary">Sign in</button>
+      </form>
+    </section>
+
+    <section id="dashboard" class="dashboard hidden">
+      <header class="admin-header">
+        <div>
+          <h1>Antibiotic Awareness Week — Admin</h1>
+          <span id="eventStateLabel" class="state-badge state-idle">Not started</span>
+        </div>
+        <button id="logoutBtn" type="button" class="btn-secondary">Sign out</button>
+      </header>
+
+      <section class="stats-row">
+        <div class="stat-box">
+          <p class="stat-label">Registered</p>
+          <p class="stat-value" id="statCount">0</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-label">Target</p>
+          <p class="stat-value" id="statTarget">0</p>
+        </div>
+        <div class="stat-box">
+          <p class="stat-label">Percentage</p>
+          <p class="stat-value" id="statPercent">0%</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Target</h2>
+        <div class="inline-form">
+          <input type="number" id="targetInput" min="1">
+          <button id="saveTargetBtn" type="button" class="btn-primary">Save target</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Event control</h2>
+        <p class="sub">Start the event timer once the ceremony begins. If the target isn't reached within the configured delay, the stage syringe will auto-fill to 100% (the real count is still kept underneath).</p>
+        <div class="btn-row">
+          <button id="startEventBtn" type="button" class="btn-primary">Start event</button>
+          <button id="restartTimerBtn" type="button" class="btn-secondary">Restart timer</button>
+          <button id="forceFillBtn" type="button" class="btn-secondary">Force 100% fill</button>
+          <button id="revertFillBtn" type="button" class="btn-secondary">Revert to actual</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Test mode</h2>
+        <p class="sub">Simulate participants for rehearsal — no real phones needed.</p>
+        <div class="btn-row">
+          <button id="add1Btn" type="button" class="btn-secondary">+1 participant</button>
+          <button id="add5Btn" type="button" class="btn-secondary">+5 participants</button>
+          <button id="add10Btn" type="button" class="btn-secondary">+10 participants</button>
+          <button id="simulate100Btn" type="button" class="btn-secondary">Simulate 100%</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Participants</h2>
+        <div id="participantList" class="participant-list"></div>
+      </section>
+
+      <section class="panel danger-panel">
+        <h2>Reset event</h2>
+        <p class="sub">Clears all participants and returns the event to its starting state. Use this before the real ceremony after any test runs.</p>
+        <button id="resetBtn" type="button" class="btn-danger">Reset event</button>
+        <div id="resetConfirm" class="confirm-box hidden">
+          <p>This permanently deletes all registered participants. Are you sure?</p>
+          <div class="btn-row">
+            <button id="confirmResetBtn" type="button" class="btn-danger">Yes, reset everything</button>
+            <button id="cancelResetBtn" type="button" class="btn-secondary">Cancel</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

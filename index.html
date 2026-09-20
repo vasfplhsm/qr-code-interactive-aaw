@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Antibiotic Awareness Week — Join the Campaign</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="participant-page">
+    <div class="card">
+      <p class="eyebrow">Hospital Seri Manjung</p>
+      <h1>Antibiotic Awareness Week</h1>
+      <p class="tagline">Together, we can help protect antibiotics for the future.</p>
+
+      <!-- Waiting screen before event is started by organizer -->
+      <section id="waitingSection" class="waiting-section hidden">
+        <div class="waiting-icon" aria-hidden="true">⏳</div>
+        <h2 class="waiting-title">Launching Soon!</h2>
+        <p class="waiting-sub">Please stand by. The launch ceremony is about to begin.</p>
+        <div class="waiting-box">
+          <p class="waiting-note">This page will <strong>automatically open</strong> the moment the emcee announces the start!</p>
+        </div>
+      </section>
+
+      <section id="formSection" class="form-section">
+        <form id="regForm" autocomplete="off">
+          <label for="nameInput">Your name</label>
+          <input
+            type="text"
+            id="nameInput"
+            name="name"
+            placeholder="e.g. Nur Aisyah"
+            maxlength="40"
+            autocomplete="name"
+            required
+          >
+          <p id="errorMsg" class="error-msg" role="alert"></p>
+          <button type="submit" id="submitBtn" class="btn-primary">JOIN THE CAMPAIGN</button>
+        </form>
+      </section>
+
+      <section id="successSection" class="success-section hidden">
+        <div class="check-wrapper">
+          <div class="check-icon" aria-hidden="true">✓</div>
+        </div>
+        <h2 class="thank-you">Thank you, <span id="successName" class="highlight-name"></span>!</h2>
+        <p class="success-sub">You have successfully joined our <strong>Antibiotic Awareness Week</strong>!</p>
+        <div class="success-stage-tip">
+          <span class="tip-icon">👀</span>
+          <p class="success-note">Look up at the stage screen — your name is joining the campaign!</p>
+        </div>
+        <div class="action-divider"></div>
+        <button type="button" id="registerAnotherBtn" class="btn-register-another">
+          <span class="btn-icon">＋</span>
+          <span>Register Another Participant</span>
+        </button>
+      </section>
+    </div>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+  <script src="js/config.js?v=3"></script>
+  <script src="js/firebase-config.js?v=3"></script>
+  <script src="js/utils.js?v=3"></script>
+  <script src="js/participant.js?v=3"></script>
+</body>
+</html>

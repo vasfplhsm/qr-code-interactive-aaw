@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, initial-scale=1.0">
+<title>Antibiotic Awareness Week — Stage Display</title>
+<link rel="stylesheet" href="css/stage.css?v=4">
+</head>
+<body>
+  <div class="stage-wrap">
+    <div class="bg-motif" aria-hidden="true"></div>
+
+    <header class="stage-header">
+      <p class="event-title" id="eventTitle"></p>
+      <p class="count-label" id="countLabel">0 / 0 registered</p>
+    </header>
+
+    <div class="syringe-zone">
+      <svg id="syringeSvg" viewBox="0 0 260 590" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="liquidGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="var(--liquid-top)"/>
+            <stop offset="100%" stop-color="var(--liquid-bottom)"/>
+          </linearGradient>
+          <clipPath id="barrelClip">
+            <rect x="60" y="38" width="140" height="444" rx="14"/>
+          </clipPath>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- Needle -->
+        <polygon points="120,4 140,4 130,-16" class="needle-tip"/>
+        <rect x="120" y="4" width="20" height="34" class="needle"/>
+
+        <!-- Barrel outline -->
+        <rect x="60" y="38" width="140" height="444" rx="14" class="barrel-outline"/>
+
+        <!-- Liquid, clipped to stay inside the barrel -->
+        <g clip-path="url(#barrelClip)">
+          <rect id="liquidRect" x="60" y="482" width="140" height="0" fill="url(#liquidGradient)" filter="url(#glow)"/>
+          <circle class="bubble b1" cx="95" cy="0" r="4"/>
+          <circle class="bubble b2" cx="140" cy="0" r="3"/>
+          <circle class="bubble b3" cx="170" cy="0" r="5"/>
+        </g>
+
+        <!-- Measurement ticks -->
+        <g class="ticks">
+          <line x1="60" y1="82" x2="46" y2="82"/>
+          <line x1="60" y1="149" x2="46" y2="149"/>
+          <line x1="60" y1="216" x2="46" y2="216"/>
+          <line x1="60" y1="283" x2="46" y2="283"/>
+          <line x1="60" y1="350" x2="46" y2="350"/>
+          <line x1="60" y1="416" x2="46" y2="416"/>
+        </g>
+
+        <!-- Plunger -->
+        <rect x="70" y="490" width="120" height="18" rx="4" class="plunger"/>
+        <rect x="118" y="508" width="24" height="62" class="plunger-rod"/>
+        <rect x="88" y="562" width="84" height="18" rx="7" class="plunger-handle"/>
+      </svg>
+
+      <p class="percent-display" id="percentDisplay">0%</p>
+    </div>
+
+    <div class="welcome-banner" id="welcomeBanner">
+      <div class="welcome-badge-row">
+        <span class="welcome-sparkle">✨</span>
+        <p class="welcome-label">JUST JOINED</p>
+      </div>
+      <p class="welcome-name" id="welcomeName"></p>
+    </div>
+
+    <footer class="feed-zone">
+      <p class="feed-title">Our Antibiotic Awareness Participants</p>
+      <div class="feed-list" id="nameFeed"></div>
+    </footer>
+
+    <div class="ready-overlay show" id="readyOverlay">
+      <p class="ready-text" id="readyText"></p>
+    </div>
+
+    <div class="celebration" id="celebration">
+      <p class="celebration-text" id="celebrationText"></p>
+      <div class="confetti-field" id="confettiField"></div>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+  <script src="js/config.js?v=4"></script>
+  <script src="js/firebase-config.js?v=4"></script>
+  <script src="js/utils.js?v=4"></script>
+  <script src="js/stage.js?v=4"></script>
+</body>
+</html>

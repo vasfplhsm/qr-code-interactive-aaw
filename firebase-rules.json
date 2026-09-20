@@ -1,0 +1,55 @@
+{
+  "rules": {
+    "participants": {
+      ".read": true,
+      ".write": "auth != null",
+      ".indexOn": ["status", "timestamp"],
+      "$participantId": {
+        ".write": "auth != null || (!data.exists() && newData.exists() && root.child('event/eventStarted').val() == true)",
+        ".validate": "newData.hasChildren(['name', 'timestamp', 'status', 'deviceId'])",
+        "name": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+        },
+        "timestamp": {
+          ".validate": true
+        },
+        "status": {
+          ".validate": "newData.val() == 'active' || auth != null"
+        },
+        "deviceId": {
+          ".validate": "newData.isString()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+
+    "deviceRegistry": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      "$deviceId": {
+        ".write": "!data.exists() || auth != null",
+        ".validate": "newData.isString()"
+      }
+    },
+
+    "event": {
+      ".read": true,
+      ".write": "auth != null",
+      "targetParticipants": { ".write": "auth != null" },
+      "eventStarted": { ".write": "auth != null" },
+      "eventStartTime": { ".write": "auth != null" },
+      "manualOverride": { ".write": "auth != null" },
+      "autoFillTriggered": {
+        ".write": "auth != null || (!data.exists() && newData.val() == true)"
+      },
+      "autoFillStartTime": {
+        ".write": "auth != null || !data.exists()"
+      },
+      "autoFillStartPercentage": {
+        ".write": "auth != null || !data.exists()"
+      }
+    }
+  }
+}
