@@ -11,16 +11,16 @@
 // Database Security Rules (see firebase-rules.json).
 //
 // Full step-by-step instructions are in README.md.
-   const firebaseConfig = {
-     apiKey: "AIzaSyAxcywf5Ql9szynQaDfyRwy8OxhZZNdDsY",
-     authDomain: "qr-code-interactive-aaw.firebaseapp.com",
-     databaseURL: "https://qr-code-interactive-aaw-default-rtdb.asia-southeast1.firebasedatabase.app",
-     projectId: "qr-code-interactive-aaw",
-     storageBucket: "qr-code-interactive-aaw.firebasestorage.app",
-     messagingSenderId: "899801770146",
-     appId: "1:899801770146:web:d12c15216562e6adf70ffb",
-     measurementId: "G-G3XHFXGL5P"
-   };
+const firebaseConfig = {
+  apiKey: "AIzaSyAxcywf5Ql9szynQaDfyRwy8OxhZZNdDsY",
+  authDomain: "qr-code-interactive-aaw.firebaseapp.com",
+  databaseURL: "https://qr-code-interactive-aaw-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "qr-code-interactive-aaw",
+  storageBucket: "qr-code-interactive-aaw.firebasestorage.app",
+  messagingSenderId: "899801770146",
+  appId: "1:899801770146:web:d12c15216562e6adf70ffb",
+  measurementId: "G-G3XHFXGL5P"
+};
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();

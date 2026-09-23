@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=1920, initial-scale=1.0">
 <title>Antibiotic Awareness Week — Stage Display</title>
-<link rel="stylesheet" href="css/stage.css?v=4">
+<link rel="stylesheet" href="css/stage.css?v=5">
 </head>
 <body>
   <div class="stage-wrap">
@@ -12,10 +12,12 @@
 
     <header class="stage-header">
       <p class="event-title" id="eventTitle"></p>
-      <p class="count-label" id="countLabel">0 / 0 registered</p>
     </header>
 
     <div class="syringe-zone">
+      <!-- Name tags that float beside the syringe -->
+      <div class="syringe-name-tags" id="syringeNameTags"></div>
+
       <svg id="syringeSvg" viewBox="0 0 260 590" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="liquidGradient" x1="0" y1="0" x2="0" y2="1">
@@ -68,12 +70,22 @@
       <p class="percent-display" id="percentDisplay">0%</p>
     </div>
 
-    <div class="welcome-banner" id="welcomeBanner">
+    <!-- Left popup banner -->
+    <div class="welcome-banner welcome-banner-left" id="welcomeBannerLeft">
       <div class="welcome-badge-row">
         <span class="welcome-sparkle">✨</span>
         <p class="welcome-label">JUST JOINED</p>
       </div>
-      <p class="welcome-name" id="welcomeName"></p>
+      <p class="welcome-name" id="welcomeNameLeft"></p>
+    </div>
+
+    <!-- Right popup banner -->
+    <div class="welcome-banner welcome-banner-right" id="welcomeBannerRight">
+      <div class="welcome-badge-row">
+        <span class="welcome-sparkle">✨</span>
+        <p class="welcome-label">JUST JOINED</p>
+      </div>
+      <p class="welcome-name" id="welcomeNameRight"></p>
     </div>
 
     <footer class="feed-zone">
@@ -87,15 +99,15 @@
 
     <div class="celebration" id="celebration">
       <p class="celebration-text" id="celebrationText"></p>
-      <div class="confetti-field" id="confettiField"></div>
+      <canvas class="fireworks-canvas" id="fireworksCanvas"></canvas>
     </div>
   </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
-  <script src="js/config.js?v=4"></script>
-  <script src="js/firebase-config.js?v=4"></script>
-  <script src="js/utils.js?v=4"></script>
-  <script src="js/stage.js?v=4"></script>
+  <script src="js/config.js?v=5"></script>
+  <script src="js/firebase-config.js?v=5"></script>
+  <script src="js/utils.js?v=5"></script>
+  <script src="js/stage.js?v=5"></script>
 </body>
 </html>

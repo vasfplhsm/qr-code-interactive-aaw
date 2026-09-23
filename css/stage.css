@@ -10,9 +10,12 @@
   --text-light: #F4F7FA;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body {
+html,
+body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -58,14 +61,9 @@ html, body {
   color: var(--text-light);
 }
 
-.count-label {
-  margin: .6vh 0 0;
-  font-size: 1.7vh;
-  color: rgba(244, 247, 250, .65);
-  font-family: 'Inter', sans-serif;
-  font-variant-numeric: tabular-nums;
-}
+/* count-label removed from display */
 
+/* ---- Syringe zone ---- */
 .syringe-zone {
   position: relative;
   z-index: 1;
@@ -82,31 +80,70 @@ html, body {
   filter: drop-shadow(0 0 40px rgba(41, 171, 226, .15));
 }
 
-.needle, .needle-tip { fill: #C7D6E3; }
-.barrel-outline { fill: rgba(255, 255, 255, 0.03); stroke: rgba(199, 214, 227, 0.55); stroke-width: 3; }
+.needle,
+.needle-tip {
+  fill: #C7D6E3;
+}
+
+.barrel-outline {
+  fill: rgba(255, 255, 255, 0.03);
+  stroke: rgba(199, 214, 227, 0.55);
+  stroke-width: 3;
+}
 
 #liquidRect {
   transition: y 1.1s cubic-bezier(.22, .9, .3, 1), height 1.1s cubic-bezier(.22, .9, .3, 1);
 }
 
-.ticks line { stroke: rgba(199, 214, 227, .35); stroke-width: 2; }
+.ticks line {
+  stroke: rgba(199, 214, 227, .35);
+  stroke-width: 2;
+}
 
-.plunger, .plunger-handle { fill: #C7D6E3; }
-.plunger-rod { fill: #9FB2C4; }
+.plunger,
+.plunger-handle {
+  fill: #C7D6E3;
+}
+
+.plunger-rod {
+  fill: #9FB2C4;
+}
 
 .bubble {
   fill: rgba(255, 255, 255, .55);
   animation: rise 3.4s ease-in infinite;
 }
-.b1 { animation-delay: 0s; }
-.b2 { animation-delay: 1.1s; }
-.b3 { animation-delay: 2.1s; }
+
+.b1 {
+  animation-delay: 0s;
+}
+
+.b2 {
+  animation-delay: 1.1s;
+}
+
+.b3 {
+  animation-delay: 2.1s;
+}
 
 @keyframes rise {
-  0% { transform: translateY(480px); opacity: 0; }
-  10% { opacity: .8; }
-  90% { opacity: .4; }
-  100% { transform: translateY(20px); opacity: 0; }
+  0% {
+    transform: translateY(480px);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: .8;
+  }
+
+  90% {
+    opacity: .4;
+  }
+
+  100% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
 }
 
 .percent-display {
@@ -119,12 +156,46 @@ html, body {
   font-variant-numeric: tabular-nums;
 }
 
+/* ---- Syringe name tags (beside the syringe) ---- */
+.syringe-name-tags {
+  position: absolute;
+  /* stretch the full height of the syringe zone */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.syringe-name-tag {
+  position: absolute;
+  /* horizontally pinned right of the syringe (tuned with JS) */
+  background: rgba(10, 22, 40, 0.85);
+  border: 1.5px solid rgba(79, 195, 247, 0.55);
+  border-radius: 999px;
+  padding: .5vh 1.2vw;
+  font-size: 1.6vh;
+  font-weight: 700;
+  font-family: 'Inter', sans-serif;
+  color: #4FC3F7;
+  white-space: nowrap;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity .35s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1);
+  box-shadow: 0 4px 20px rgba(41, 171, 226, .2);
+  pointer-events: none;
+}
+
+.syringe-name-tag.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* ---- Dual side welcome banners ---- */
 .welcome-banner {
   position: absolute;
-  right: 4vw;
-  top: 14vh;
-  transform: translateX(40px);
-  opacity: 0;
+  top: 20vh;
   z-index: 10;
   text-align: left;
   background: rgba(10, 22, 40, 0.90);
@@ -133,13 +204,32 @@ html, body {
   border-radius: 20px;
   padding: 1.8vh 2vw;
   backdrop-filter: blur(12px);
-  transition: opacity .5s cubic-bezier(.2, .9, .3, 1), transform .5s cubic-bezier(.2, .9, .3, 1);
-  max-width: 25vw;
-  min-width: 280px;
+  max-width: 22vw;
+  min-width: 260px;
   pointer-events: none;
+  opacity: 0;
 }
 
-.welcome-banner.show {
+/* Left banner slides in from the left */
+.welcome-banner-left {
+  left: 4vw;
+  transform: translateX(-60px);
+  transition: opacity .5s cubic-bezier(.2, .9, .3, 1), transform .5s cubic-bezier(.2, .9, .3, 1);
+}
+
+.welcome-banner-left.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Right banner slides in from the right */
+.welcome-banner-right {
+  right: 4vw;
+  transform: translateX(60px);
+  transition: opacity .5s cubic-bezier(.2, .9, .3, 1), transform .5s cubic-bezier(.2, .9, .3, 1);
+}
+
+.welcome-banner-right.show {
   opacity: 1;
   transform: translateX(0);
 }
@@ -176,6 +266,7 @@ html, body {
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 
+/* ---- Name feed at bottom ---- */
 .feed-zone {
   position: relative;
   z-index: 1;
@@ -211,10 +302,18 @@ html, body {
 }
 
 @keyframes chipIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
+/* ---- Ready overlay ---- */
 .ready-overlay {
   position: absolute;
   inset: 0;
@@ -228,7 +327,10 @@ html, body {
   transition: opacity .6s ease;
 }
 
-.ready-overlay.show { opacity: 1; pointer-events: auto; }
+.ready-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .ready-text {
   font-size: 6vh;
@@ -237,6 +339,7 @@ html, body {
   color: var(--text-light);
 }
 
+/* ---- Celebration & Fireworks ---- */
 .celebration {
   position: absolute;
   inset: 0;
@@ -250,7 +353,9 @@ html, body {
   background: radial-gradient(circle, rgba(31, 163, 122, .18) 0%, transparent 70%);
 }
 
-.celebration.show { opacity: 1; }
+.celebration.show {
+  opacity: 1;
+}
 
 .celebration-text {
   font-size: 5.4vh;
@@ -258,27 +363,41 @@ html, body {
   color: var(--text-light);
   text-shadow: 0 0 40px rgba(31, 163, 122, .6);
   z-index: 2;
+  position: relative;
+  text-align: center;
+  pointer-events: none;
+  animation: textPulse 1.6s ease-in-out infinite alternate;
 }
 
-.confetti-field { position: absolute; inset: 0; overflow: hidden; }
+@keyframes textPulse {
+  from {
+    text-shadow: 0 0 40px rgba(31, 163, 122, .6), 0 0 80px rgba(79, 195, 247, .3);
+  }
 
-.confetti-piece {
+  to {
+    text-shadow: 0 0 70px rgba(31, 163, 122, 1), 0 0 140px rgba(79, 195, 247, .6);
+  }
+}
+
+.fireworks-canvas {
   position: absolute;
-  top: -5vh;
-  width: .8vh;
-  height: 1.6vh;
-  opacity: .85;
-  animation-name: fall;
-  animation-timing-function: linear;
-  animation-iteration-count: 1;
-}
-
-@keyframes fall {
-  to { transform: translateY(110vh) rotate(300deg); opacity: 0; }
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #liquidRect, .welcome-banner, .ready-overlay, .celebration, .feed-chip, .bubble, .confetti-piece {
+
+  #liquidRect,
+  .welcome-banner,
+  .ready-overlay,
+  .celebration,
+  .feed-chip,
+  .bubble,
+  .syringe-name-tag,
+  .celebration-text {
     transition: none;
     animation: none;
   }
