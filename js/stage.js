@@ -56,7 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Banner cycling: we show BANNER_BATCH names simultaneously,
   // alternating between left and right slots.
-  const BANNER_BATCH = 6;            // names shown at once
+  const BANNER_BATCH = 10;           // names shown at once
   const BANNER_DURATION_MS = (CONFIG.NAME_DISPLAY_DURATION_SECONDS || 3) * 1000;
   const BANNER_STAGGER_MS = 400;    // delay between each banner popping in
   // Banner slots: each has a left and a right element pair
@@ -252,7 +252,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const el = document.createElement("div");
       el.className = "syringe-name-tag";
       syringeNameTags.appendChild(el);
-      tagSlots.push({ el, occupied: false, side: i % 2 === 0 ? "right" : "left" });
+      // Assign sides alternating, plus store a tiny seeded jitter multiplier
+      tagSlots.push({
+        el,
+        occupied: false,
+        side: i % 2 === 0 ? "right" : "left",
+        // Small deterministic scatter: -1 to +1 multiplier per slot
+        jitter: (((i * 7 + 3) % 20) - 10) / 10   // values like -1, -0.3, 0.4, …
+      });
     }
     window.addEventListener("resize", repositionAllTags);
   }
@@ -269,45 +276,72 @@ document.addEventListener("DOMContentLoaded", () => {
     const topEdge = svgRect.top - zoneRect.top;
     const syrHeight = svgRect.height;
 
-    // Count how many tags are on each side up to this index
     const side = tagSlots[index].side;
+    const jitter = tagSlots[index].jitter;
+
+    // Count only OCCUPIED slots on this side up to (but not including) this index
     let sideIndex = 0;
-    for (let i = 0; i < index; i++) {
-      if (tagSlots[i].side === side) sideIndex++;
+    let totalOccupiedOnSide = 0;
+    for (let i = 0; i < tagSlots.length; i++) {
+      if (tagSlots[i].side !== side || !tagSlots[i].occupied) continue;
+      if (i < index) sideIndex++;
+      totalOccupiedOnSide++;
     }
 
-    // Spread across 80% of syringe height (10% margin top+bottom)
+    // Spread tags across 80% of syringe height (10% padding top+bottom)
     const spread = syrHeight * 0.80;
     const startY = topEdge + syrHeight * 0.10;
-    const maxPerSide = Math.ceil(MAX_NAME_TAGS / 2);
-    const step = maxPerSide > 1 ? spread / (maxPerSide - 1) : 0;
-    const tagY = startY + sideIndex * step;
+
+    // Step between tags — based on how many are actually showing
+    const step = totalOccupiedOnSide > 1 ? spread / (totalOccupiedOnSide - 1) : spread / 2;
+
+    // Clamp step so tags are at least ~tag-height apart but never too far apart
+    const tagHeightPx = Math.max(18, syrHeight * 0.035); // approximate pill height
+    const minStep = tagHeightPx + 4;
+    const effectiveStep = Math.max(step, minStep);
+
+    const tagY = startY + sideIndex * effectiveStep
+      + jitter * Math.min(effectiveStep * 0.25, 8); // scatter ±25% of step
+
+    // Horizontal gap: alternate between 14 px and 28 px so consecutive tags
+    // don't all sit at the exact same X position
+    const xOffset = 14 + Math.abs(jitter) * 10;
 
     if (side === "right") {
-      el.style.left = (rightEdge + 14) + "px";
+      el.style.left = (rightEdge + xOffset) + "px";
+      el.style.right = "";
     } else {
-      // Position to the LEFT of the syringe; we use right-side anchor but negative offset
       el.style.left = "";
-      el.style.right = (zoneRect.width - leftEdge + 14) + "px";
+      el.style.right = (zoneRect.width - leftEdge + xOffset) + "px";
     }
     el.style.top = tagY + "px";
   }
 
   function repositionAllTags() {
-    tagSlots.forEach((slot, i) => positionTagSlot(i, slot.el));
+    // Only reposition occupied slots (unoccupied are invisible, no need)
+    tagSlots.forEach((slot, i) => {
+      if (slot.occupied) positionTagSlot(i, slot.el);
+    });
   }
 
   function addNameTag(name) {
     // Find next unoccupied slot
     const freeSlot = tagSlots.find(s => !s.occupied);
     if (!freeSlot) return; // all 100 filled — ignore
-    const index = tagSlots.indexOf(freeSlot);
 
     freeSlot.el.textContent = name;
     freeSlot.occupied = true;
-    positionTagSlot(index, freeSlot.el);
 
-    // Animate in
+    // Reposition ALL occupied tags on the same side so they spread evenly
+    // to make room for the newcomer instead of stacking.
+    const sameSide = freeSlot.side;
+    tagSlots.forEach((slot, i) => {
+      if (slot.occupied && slot.side === sameSide) {
+        positionTagSlot(i, slot.el);
+      }
+    });
+
+    // Animate new tag in
     requestAnimationFrame(() => {
       requestAnimationFrame(() => freeSlot.el.classList.add("visible"));
     });
