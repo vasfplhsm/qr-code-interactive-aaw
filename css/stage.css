@@ -196,26 +196,28 @@ body {
 /* ---- Dual side welcome banners ---- */
 .welcome-banner {
   position: absolute;
-  top: 20vh;
+  top: 12vh;
   z-index: 10;
   text-align: left;
-  background: rgba(10, 22, 40, 0.90);
+  background: rgba(10, 22, 40, 0.92);
   border: 1.5px solid rgba(41, 171, 226, 0.55);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(41, 171, 226, 0.25);
-  border-radius: 20px;
-  padding: 1.8vh 2vw;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5), 0 0 20px rgba(41, 171, 226, 0.2);
+  border-radius: 14px;
+  padding: 0.9vh 1.2vw;
   backdrop-filter: blur(12px);
-  max-width: 22vw;
-  min-width: 260px;
+  width: 19vw;
+  max-width: 20vw;
+  min-width: 180px;
+  box-sizing: border-box;
   pointer-events: none;
   opacity: 0;
 }
 
 /* Left banner slides in from the left */
 .welcome-banner-left {
-  left: 4vw;
-  transform: translateX(-60px);
-  transition: opacity .5s cubic-bezier(.2, .9, .3, 1), transform .5s cubic-bezier(.2, .9, .3, 1);
+  left: 3.5vw;
+  transform: translateX(-40px);
+  transition: opacity .45s cubic-bezier(.2, .9, .3, 1), transform .45s cubic-bezier(.2, .9, .3, 1);
 }
 
 .welcome-banner-left.show {
@@ -225,9 +227,9 @@ body {
 
 /* Right banner slides in from the right */
 .welcome-banner-right {
-  right: 4vw;
-  transform: translateX(60px);
-  transition: opacity .5s cubic-bezier(.2, .9, .3, 1), transform .5s cubic-bezier(.2, .9, .3, 1);
+  right: 3.5vw;
+  transform: translateX(40px);
+  transition: opacity .45s cubic-bezier(.2, .9, .3, 1), transform .45s cubic-bezier(.2, .9, .3, 1);
 }
 
 .welcome-banner-right.show {
@@ -235,28 +237,29 @@ body {
   transform: translateX(0);
 }
 
-/* Extra banner slots stack below the first */
+/* Extra banner slots */
 .welcome-banner-extra {
-  max-width: 18vw;
-  min-width: 200px;
-  padding: 1.2vh 1.4vw;
+  width: 19vw;
+  max-width: 20vw;
+  min-width: 180px;
+  padding: 0.9vh 1.2vw;
 }
 
 .welcome-badge-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 6px;
+  margin-bottom: 3px;
 }
 
 .welcome-sparkle {
-  font-size: 1.8vh;
+  font-size: 1.4vh;
   line-height: 1;
 }
 
 .welcome-label {
   margin: 0;
-  font-size: 1.3vh;
+  font-size: 1.1vh;
   font-weight: 700;
   color: #4FC3F7;
   font-family: 'Manrope', sans-serif;
@@ -266,12 +269,12 @@ body {
 
 .welcome-name {
   margin: 0;
-  font-size: 3.2vh;
+  font-size: 2.1vh;
   font-weight: 800;
   color: #FFFFFF;
-  line-height: 1.2;
+  line-height: 1.22;
   word-break: break-word;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 /* ---- Ready overlay ---- */

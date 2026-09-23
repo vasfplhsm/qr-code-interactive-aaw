@@ -44,6 +44,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let eventStarted = false;
   let eventStartTime = null;
   let manualForced = false;
+  let autoFillTriggered = false;
   let hasCelebrated = false;
   let autoFillTimeoutHandle = null;
   let autoFillRAF = null;
@@ -54,15 +55,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let namesInitialized = false;
 
   // Banner cycling: we show BANNER_BATCH names simultaneously,
-  // alternating between left and right slots.
+  // 5 slots on left, 5 slots on right
   const BANNER_BATCH = 10;           // names shown at once
   const BANNER_DURATION_MS = (CONFIG.NAME_DISPLAY_DURATION_SECONDS || 3) * 1000;
   const BANNER_STAGGER_MS = 400;    // delay between each banner popping in
-  // Banner slots: each has a left and a right element pair
-  // We'll re-use the existing left/right banners for slot 0,
-  // and create additional floating divs for slots 1-5.
-  const bannerSlots = [];   // [{left, right, timer}]
-  // No global lock needed – each slot manages its own availability
+  const bannerSlots = [];
 
   // Syringe name-tag state – permanent pills on BOTH sides, up to 100
   const MAX_NAME_TAGS = 100;
@@ -85,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return AAWUtils.clampPercentage((activeCount / targetParticipants) * 100);
   }
 
-  const CELEBRATION_DURATION_MS = 60000; // Run fireworks celebration for at least 1 minute
+  const CELEBRATION_DURATION_MS = Math.max(60000, (CONFIG.CELEBRATION_DURATION_SECONDS || 60) * 1000); // At least 1 minute
   let celebrationTimeoutHandle = null;
 
   function applyPercent(percent) {
@@ -99,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
         celebrationEl.classList.remove("show");
         stopFireworks();
       }, CELEBRATION_DURATION_MS);
-    } else if (percent < 100 && hasCelebrated) {
+    } else if (percent < 100 && hasCelebrated && !autoFillTriggered && !manualForced) {
       hasCelebrated = false;
       if (celebrationTimeoutHandle) {
         clearTimeout(celebrationTimeoutHandle);
@@ -112,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function paintRealtime() {
     if (autoFillRAF !== null) return;
-    if (manualForced) { applyPercent(100); return; }
+    if (manualForced || autoFillTriggered) { applyPercent(100); return; }
     applyPercent(actualPercentage());
   }
 
@@ -126,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const durationMs = Math.max(1, durationSeconds) * 1000;
     const alreadyElapsed = Date.now() - startTimeMs;
 
-    if (alreadyElapsed >= durationMs) { paintRealtime(); return; }
+    if (alreadyElapsed >= durationMs) { applyPercent(100); return; }
 
     function step() {
       const t = Math.min(1, (Date.now() - startTimeMs) / durationMs);
@@ -136,7 +133,7 @@ document.addEventListener("DOMContentLoaded", () => {
         autoFillRAF = requestAnimationFrame(step);
       } else {
         autoFillRAF = null;
-        paintRealtime();
+        applyPercent(100);
       }
     }
     autoFillRAF = requestAnimationFrame(step);
@@ -171,80 +168,83 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ================================================================
   //  Multi-banner system: BANNER_BATCH names shown simultaneously
+  //  5 slots on LEFT (indices 0, 2, 4, 6, 8)
+  //  5 slots on RIGHT (indices 1, 3, 5, 7, 9)
   // ================================================================
-  function createBannerPair(index) {
-    // Slot 0 reuses the existing HTML elements
+  function createBannerSlot(index) {
+    const side = (index % 2 === 0) ? "left" : "right";
+    const row = Math.floor(index / 2); // 0 .. 4
+    // Left starts at 12vh, Right starts at 14vh; step 16vh down (max row 4 is at 76vh / 78vh)
+    const topVh = (side === "left" ? 12 : 14) + row * 16;
+
     if (index === 0) {
+      bannerLeft.style.top = topVh + "vh";
       return {
-        left: bannerLeft, right: bannerRight,
-        nameLeft: bannerNameLeft, nameRight: bannerNameRight, timer: null
+        side, left: bannerLeft, right: null,
+        nameLeft: bannerNameLeft, nameRight: null,
+        timer: null
       };
     }
-    // Extra slots: create new banner pairs dynamically
+    if (index === 1) {
+      bannerRight.style.top = topVh + "vh";
+      return {
+        side, left: null, right: bannerRight,
+        nameLeft: null, nameRight: bannerNameRight,
+        timer: null
+      };
+    }
+
     const stageWrap = document.querySelector(".stage-wrap");
+    const wrap = document.createElement("div");
+    wrap.className = `welcome-banner welcome-banner-${side} welcome-banner-extra`;
+    wrap.style.top = topVh + "vh";
 
-    const makeEl = (side, i) => {
-      const wrap = document.createElement("div");
-      wrap.className = `welcome-banner welcome-banner-${side} welcome-banner-extra`;
-      // Offset vertically: slot 0 is at 20vh, each extra slot goes lower
-      wrap.style.top = (20 + index * 11) + "vh";
-      const row = document.createElement("div");
-      row.className = "welcome-badge-row";
-      const spark = document.createElement("span");
-      spark.className = "welcome-sparkle";
-      spark.textContent = "✨";
-      const label = document.createElement("p");
-      label.className = "welcome-label";
-      label.textContent = "JUST JOINED";
-      row.append(spark, label);
-      const nameP = document.createElement("p");
-      nameP.className = "welcome-name";
-      wrap.append(row, nameP);
-      stageWrap.appendChild(wrap);
-      return { wrap, nameP };
-    };
+    const rowEl = document.createElement("div");
+    rowEl.className = "welcome-badge-row";
+    const spark = document.createElement("span");
+    spark.className = "welcome-sparkle";
+    spark.textContent = "✨";
+    const label = document.createElement("p");
+    label.className = "welcome-label";
+    label.textContent = "JUST JOINED";
+    rowEl.append(spark, label);
 
-    const leftPair = makeEl("left", index);
-    const rightPair = makeEl("right", index);
+    const nameP = document.createElement("p");
+    nameP.className = "welcome-name";
+    wrap.append(rowEl, nameP);
+    stageWrap.appendChild(wrap);
+
     return {
-      left: leftPair.wrap, right: rightPair.wrap,
-      nameLeft: leftPair.nameP, nameRight: rightPair.nameP,
+      side,
+      left: (side === "left" ? wrap : null),
+      right: (side === "right" ? wrap : null),
+      nameLeft: (side === "left" ? nameP : null),
+      nameRight: (side === "right" ? nameP : null),
       timer: null
     };
   }
 
   function initBannerSlots() {
     for (let i = 0; i < BANNER_BATCH; i++) {
-      bannerSlots.push(createBannerPair(i));
+      bannerSlots.push(createBannerSlot(i));
     }
   }
 
-  // Show one name in a specific banner slot (left = left side, right = right side)
-  // Each slot alternates which side carries the name vs. stays hidden
+  // Show one name in a specific banner slot
   function showInSlot(slotIndex, name) {
     const slot = bannerSlots[slotIndex];
     if (!slot) return;
     // Clear any running hide timer (slot claimed by processQueue via sentinel -1)
     if (slot.timer && slot.timer !== -1) clearTimeout(slot.timer);
 
-    // Even slots show on left, odd slots on right – visual variety
-    const useLeft = (slotIndex % 2 === 0);
+    const bannerEl = slot.side === "left" ? slot.left : slot.right;
+    const nameEl = slot.side === "left" ? slot.nameLeft : slot.nameRight;
 
-    if (useLeft) {
-      slot.nameLeft.textContent = name;
-      slot.nameRight.textContent = name;
-      slot.left.classList.add("show");
-      slot.right.classList.remove("show");
-    } else {
-      slot.nameLeft.textContent = name;
-      slot.nameRight.textContent = name;
-      slot.right.classList.add("show");
-      slot.left.classList.remove("show");
-    }
+    if (nameEl) nameEl.textContent = name;
+    if (bannerEl) bannerEl.classList.add("show");
 
     slot.timer = setTimeout(() => {
-      slot.left.classList.remove("show");
-      slot.right.classList.remove("show");
+      if (bannerEl) bannerEl.classList.remove("show");
       slot.timer = null;   // slot is now free
       processQueue();      // immediately pick up any waiting names
     }, BANNER_DURATION_MS);
@@ -294,10 +294,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const zoneRect = zoneEl ? zoneEl.getBoundingClientRect() : null;
     if (!svgRect || !zoneRect) return;
 
-    const rightEdge  = svgRect.right  - zoneRect.left;
-    const leftEdge   = svgRect.left   - zoneRect.left;
-    const topEdge    = svgRect.top    - zoneRect.top;
-    const syrHeight  = svgRect.height;
+    // Accurate barrel coordinates within the SVG viewBox (0 0 260 590):
+    // Barrel is x=60 to x=200 out of width 260
+    const barrelLeftPx  = (svgRect.left - zoneRect.left) + (60 / 260) * svgRect.width;
+    const barrelRightPx = (svgRect.left - zoneRect.left) + (200 / 260) * svgRect.width;
+    const topEdge       = svgRect.top - zoneRect.top;
+    const syrHeight     = svgRect.height;
 
     const info    = tagSlots[index];
     const tagZone = info.zone;
@@ -318,17 +320,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const colYShift = col * (rowStep / COLS);
     const tagY = startY + row * rowStep + colYShift + jitter * (rowStep * 0.12);
 
-    // Horizontal: columns step outwards from the syringe barrel
-    const COL_STEP = 115;  // px between column centres
-    const BASE_X   = 14;   // px gap from syringe barrel to first column
-    const tagX = BASE_X + col * COL_STEP + jitter2 * 8;
+    // Horizontal: columns step outwards from the syringe barrel neatly
+    const COL_STEP = 75;  // px between column centres
+    const BASE_X   = 12;  // px gap from syringe barrel to first column
+    const tagX = BASE_X + col * COL_STEP + jitter2 * 6;
 
     if (tagZone === "right") {
-      el.style.left  = (rightEdge + tagX) + "px";
+      el.style.left  = (barrelRightPx + tagX) + "px";
       el.style.right = "";
     } else {
       el.style.left  = "";
-      el.style.right = (zoneRect.width - leftEdge + tagX) + "px";
+      el.style.right = (zoneRect.width - barrelLeftPx + tagX) + "px";
     }
     el.style.top = tagY + "px";
   }
@@ -651,6 +653,7 @@ document.addEventListener("DOMContentLoaded", () => {
     activeCount = ids.length;
 
     if (ids.length === 0) {
+      autoFillTriggered = false;
       if (celebrationTimeoutHandle) {
         clearTimeout(celebrationTimeoutHandle);
         celebrationTimeoutHandle = null;
@@ -702,7 +705,7 @@ document.addEventListener("DOMContentLoaded", () => {
     eventStarted = !!data.eventStarted;
     eventStartTime = data.eventStartTime || null;
     manualForced = data.manualOverride === "force100";
-    const autoFillTriggered = !!data.autoFillTriggered;
+    autoFillTriggered = !!data.autoFillTriggered;
     const dbStartTime = data.autoFillStartTime || null;
     const dbStartPct = typeof data.autoFillStartPercentage === "number"
       ? data.autoFillStartPercentage : 0;
@@ -710,6 +713,7 @@ document.addEventListener("DOMContentLoaded", () => {
     readyOverlay.classList.toggle("show", !eventStarted);
 
     if (!eventStarted) {
+      autoFillTriggered = false;
       if (autoFillTimeoutHandle) { clearTimeout(autoFillTimeoutHandle); autoFillTimeoutHandle = null; }
       if (autoFillRAF) { cancelAnimationFrame(autoFillRAF); autoFillRAF = null; }
       animatingStartTime = null;

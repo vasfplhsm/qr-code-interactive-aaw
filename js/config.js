@@ -45,6 +45,10 @@ window.AAW_CONFIG = {
   // Text shown on the stage screen's 100% celebration animation.
   EVENT_COMPLETION_MESSAGE: "100% PARTICIPATION!",
 
+  // How many seconds the 100% celebration and fireworks animation
+  // continues running on stage after reaching 100% participation (at least 60s).
+  CELEBRATION_DURATION_SECONDS: 60,
+
   // Optional: the full URL of the participant registration page
   // (index.html), used to generate the QR code on qr.html.
   // Leave this as an empty string to auto-detect the URL from
