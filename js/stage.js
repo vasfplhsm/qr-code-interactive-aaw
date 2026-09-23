@@ -1,5 +1,5 @@
 // ============================================================
-// STAGE DISPLAY  –  v5
+// STAGE DISPLAY  –  v6
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
   const CONFIG = window.AAW_CONFIG;
@@ -51,14 +51,23 @@ document.addEventListener("DOMContentLoaded", () => {
   let animatingStartTime = null;
 
   const nameQueue = [];
-  let displayingName = false;
   const knownParticipantIds = new Set();
   let namesInitialized = false;
 
-  // Syringe name-tag state: list of {el, slot} pairs
-  const NAME_TAG_SLOTS = 6;      // max persistent tags beside syringe
-  const TAG_LIFETIME_MS = 20000;  // how long a tag stays visible
-  const tagSlots = [];     // array of {el, timeoutId} per slot index
+  // Banner cycling: we show BANNER_BATCH names simultaneously,
+  // alternating between left and right slots.
+  const BANNER_BATCH = 6;            // names shown at once
+  const BANNER_DURATION_MS = (CONFIG.NAME_DISPLAY_DURATION_SECONDS || 3) * 1000;
+  const BANNER_STAGGER_MS = 400;    // delay between each banner popping in
+  // Banner slots: each has a left and a right element pair
+  // We'll re-use the existing left/right banners for slot 0,
+  // and create additional floating divs for slots 1-5.
+  const bannerSlots = [];   // [{left, right, timer}]
+  let bannerProcessing = false;
+
+  // Syringe name-tag state – permanent pills on BOTH sides, up to 100
+  const MAX_NAME_TAGS = 100;
+  const tagSlots = [];     // array of {el}
 
   const TOP_Y = 38;
   const BOTTOM_Y = 482;
@@ -154,55 +163,134 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ================================================================
-  //  Dual banner popup (left + right simultaneously)
+  //  Multi-banner system: BANNER_BATCH names shown simultaneously
   // ================================================================
-  function showBanners(name) {
-    bannerNameLeft.textContent = name;
-    bannerNameRight.textContent = name;
-    bannerLeft.classList.add("show");
-    bannerRight.classList.add("show");
+  function createBannerPair(index) {
+    // Slot 0 reuses the existing HTML elements
+    if (index === 0) {
+      return {
+        left: bannerLeft, right: bannerRight,
+        nameLeft: bannerNameLeft, nameRight: bannerNameRight, timer: null
+      };
+    }
+    // Extra slots: create new banner pairs dynamically
+    const stageWrap = document.querySelector(".stage-wrap");
 
-    setTimeout(() => {
-      bannerLeft.classList.remove("show");
-      bannerRight.classList.remove("show");
-    }, CONFIG.NAME_DISPLAY_DURATION_SECONDS * 1000);
+    const makeEl = (side, i) => {
+      const wrap = document.createElement("div");
+      wrap.className = `welcome-banner welcome-banner-${side} welcome-banner-extra`;
+      // Offset vertically: slot 0 is at 20vh, each extra slot goes lower
+      wrap.style.top = (20 + index * 11) + "vh";
+      const row = document.createElement("div");
+      row.className = "welcome-badge-row";
+      const spark = document.createElement("span");
+      spark.className = "welcome-sparkle";
+      spark.textContent = "✨";
+      const label = document.createElement("p");
+      label.className = "welcome-label";
+      label.textContent = "JUST JOINED";
+      row.append(spark, label);
+      const nameP = document.createElement("p");
+      nameP.className = "welcome-name";
+      wrap.append(row, nameP);
+      stageWrap.appendChild(wrap);
+      return { wrap, nameP };
+    };
+
+    const leftPair = makeEl("left", index);
+    const rightPair = makeEl("right", index);
+    return {
+      left: leftPair.wrap, right: rightPair.wrap,
+      nameLeft: leftPair.nameP, nameRight: rightPair.nameP,
+      timer: null
+    };
+  }
+
+  function initBannerSlots() {
+    for (let i = 0; i < BANNER_BATCH; i++) {
+      bannerSlots.push(createBannerPair(i));
+    }
+  }
+
+  // Show one name in a specific banner slot (left = left side, right = right side)
+  // Each slot alternates which side carries the name vs. stays hidden
+  function showInSlot(slotIndex, name) {
+    const slot = bannerSlots[slotIndex];
+    if (!slot) return;
+    // Clear any running hide timer
+    if (slot.timer) clearTimeout(slot.timer);
+
+    // Alternate: even slots use left+right both, but show name only on left;
+    // odd slots show only on right. This gives visual variety.
+    const useLeft = (slotIndex % 2 === 0);
+    const useRight = (slotIndex % 2 === 1);
+
+    if (useLeft) {
+      slot.nameLeft.textContent = name;
+      slot.nameRight.textContent = name;
+      slot.left.classList.add("show");
+      slot.right.classList.remove("show");
+    } else {
+      slot.nameLeft.textContent = name;
+      slot.nameRight.textContent = name;
+      slot.right.classList.add("show");
+      slot.left.classList.remove("show");
+    }
+
+    slot.timer = setTimeout(() => {
+      slot.left.classList.remove("show");
+      slot.right.classList.remove("show");
+    }, BANNER_DURATION_MS);
   }
 
   // ================================================================
-  //  Syringe name tags (persistent pills that stay beside the syringe)
+  //  Syringe name tags – permanent pills on BOTH sides, up to 100
   // ================================================================
   function initNameTagSlots() {
-    for (let i = 0; i < NAME_TAG_SLOTS; i++) {
+    // Pre-create MAX_NAME_TAGS slot elements; they start invisible
+    for (let i = 0; i < MAX_NAME_TAGS; i++) {
       const el = document.createElement("div");
       el.className = "syringe-name-tag";
       syringeNameTags.appendChild(el);
-      tagSlots.push({ el, timeoutId: null, occupied: false });
-      positionTagSlot(i, el);
+      tagSlots.push({ el, occupied: false, side: i % 2 === 0 ? "right" : "left" });
     }
-    // Reposition on resize
     window.addEventListener("resize", repositionAllTags);
   }
 
   function positionTagSlot(index, el) {
-    // We pin tags on the RIGHT side of the syringe.
-    // Vertical: spread them across the syringe barrel area.
     const svgEl = document.getElementById("syringeSvg");
     const zone = document.querySelector(".syringe-zone");
     const svgRect = svgEl ? svgEl.getBoundingClientRect() : null;
     const zoneRect = zone ? zone.getBoundingClientRect() : null;
-
     if (!svgRect || !zoneRect) return;
 
     const rightEdge = svgRect.right - zoneRect.left;
+    const leftEdge = svgRect.left - zoneRect.left;
     const topEdge = svgRect.top - zoneRect.top;
     const syrHeight = svgRect.height;
-    // Spread tags from ~15% to ~85% of syringe height
-    const spread = syrHeight * 0.70;
-    const startY = topEdge + syrHeight * 0.15;
-    const step = NAME_TAG_SLOTS > 1 ? spread / (NAME_TAG_SLOTS - 1) : 0;
 
-    el.style.left = (rightEdge + 16) + "px";
-    el.style.top = (startY + index * step) + "px";
+    // Count how many tags are on each side up to this index
+    const side = tagSlots[index].side;
+    let sideIndex = 0;
+    for (let i = 0; i < index; i++) {
+      if (tagSlots[i].side === side) sideIndex++;
+    }
+
+    // Spread across 80% of syringe height (10% margin top+bottom)
+    const spread = syrHeight * 0.80;
+    const startY = topEdge + syrHeight * 0.10;
+    const maxPerSide = Math.ceil(MAX_NAME_TAGS / 2);
+    const step = maxPerSide > 1 ? spread / (maxPerSide - 1) : 0;
+    const tagY = startY + sideIndex * step;
+
+    if (side === "right") {
+      el.style.left = (rightEdge + 14) + "px";
+    } else {
+      // Position to the LEFT of the syringe; we use right-side anchor but negative offset
+      el.style.left = "";
+      el.style.right = (zoneRect.width - leftEdge + 14) + "px";
+    }
+    el.style.top = tagY + "px";
   }
 
   function repositionAllTags() {
@@ -210,59 +298,47 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function addNameTag(name) {
-    // Find the slot with the oldest entry (or an empty one)
-    let targetIndex = 0;
-    for (let i = 0; i < tagSlots.length; i++) {
-      if (!tagSlots[i].occupied) { targetIndex = i; break; }
-      // Recycle oldest: the first occupied one we find
-      targetIndex = i;
-    }
+    // Find next unoccupied slot
+    const freeSlot = tagSlots.find(s => !s.occupied);
+    if (!freeSlot) return; // all 100 filled — ignore
+    const index = tagSlots.indexOf(freeSlot);
 
-    const slot = tagSlots[targetIndex];
+    freeSlot.el.textContent = name;
+    freeSlot.occupied = true;
+    positionTagSlot(index, freeSlot.el);
 
-    // Clear any existing hide-timeout
-    if (slot.timeoutId) clearTimeout(slot.timeoutId);
-
-    slot.el.classList.remove("visible");
-    slot.el.textContent = name;
-    slot.occupied = true;
-
-    // Trigger animation on next frame
+    // Animate in
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => slot.el.classList.add("visible"));
+      requestAnimationFrame(() => freeSlot.el.classList.add("visible"));
     });
-
-    // Auto-hide after TAG_LIFETIME_MS
-    slot.timeoutId = setTimeout(() => {
-      slot.el.classList.remove("visible");
-      slot.occupied = false;
-    }, TAG_LIFETIME_MS);
   }
 
   // ================================================================
-  //  Name queue
+  //  Name queue – process BANNER_BATCH names simultaneously, fast
   // ================================================================
   function enqueueName(name) { nameQueue.push(name); processQueue(); }
 
   function processQueue() {
-    if (displayingName || nameQueue.length === 0) return;
-    displayingName = true;
-    const name = nameQueue.shift();
+    if (bannerProcessing || nameQueue.length === 0) return;
+    bannerProcessing = true;
 
-    // Show both side banners
-    showBanners(name);
+    // Take up to BANNER_BATCH names at once
+    const batch = nameQueue.splice(0, BANNER_BATCH);
 
-    // Add persistent tag beside the syringe
-    addNameTag(name);
+    batch.forEach((name, i) => {
+      setTimeout(() => {
+        showInSlot(i, name);
+        addNameTag(name);
+        addToFeed(name);
+      }, i * BANNER_STAGGER_MS);
+    });
 
-    // Add to scrolling feed at bottom
-    addToFeed(name);
-
-    // Allow next name after banner duration
+    // After the banner duration + stagger, release and process next batch
+    const totalWait = BANNER_DURATION_MS + batch.length * BANNER_STAGGER_MS + 300;
     setTimeout(() => {
-      displayingName = false;
+      bannerProcessing = false;
       processQueue();
-    }, CONFIG.NAME_DISPLAY_DURATION_SECONDS * 1000 + 400);
+    }, totalWait);
   }
 
   function addToFeed(name) {
@@ -270,7 +346,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chip.className = "feed-chip";
     chip.textContent = name;
     nameFeed.prepend(chip);
-    while (nameFeed.children.length > 8) nameFeed.removeChild(nameFeed.lastChild);
+    while (nameFeed.children.length > 20) nameFeed.removeChild(nameFeed.lastChild);
   }
 
   // ================================================================
@@ -460,9 +536,20 @@ document.addEventListener("DOMContentLoaded", () => {
       knownParticipantIds.clear();
       namesInitialized = false;
       nameQueue.length = 0;
+      bannerProcessing = false;
       if (nameFeed) nameFeed.innerHTML = "";
+      // Clear all name tags
+      tagSlots.forEach(s => {
+        s.el.classList.remove("visible");
+        s.occupied = false;
+      });
     } else if (!namesInitialized) {
-      ids.forEach((id) => knownParticipantIds.add(id));
+      // ---- FIX: enqueue ALL existing participants on first load ----
+      const sorted = ids.slice().sort((a, b) => (data[a].timestamp || 0) - (data[b].timestamp || 0));
+      sorted.forEach((id) => {
+        knownParticipantIds.add(id);
+        if (data[id] && data[id].name) enqueueName(AAWUtils.escapeHTML(data[id].name));
+      });
       namesInitialized = true;
     } else {
       const newIds = ids
@@ -519,6 +606,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- Init ----
   setLiquidVisual(0);
+  initBannerSlots();
   initNameTagSlots();
+  // Reposition tags after layout is ready
+  requestAnimationFrame(() => requestAnimationFrame(repositionAllTags));
   initFireworksCanvas();
 });

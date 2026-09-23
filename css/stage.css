@@ -170,12 +170,11 @@ body {
 
 .syringe-name-tag {
   position: absolute;
-  /* horizontally pinned right of the syringe (tuned with JS) */
   background: rgba(10, 22, 40, 0.85);
   border: 1.5px solid rgba(79, 195, 247, 0.55);
   border-radius: 999px;
-  padding: .5vh 1.2vw;
-  font-size: 1.6vh;
+  padding: .35vh .9vw;
+  font-size: 1.15vh;
   font-weight: 700;
   font-family: 'Inter', sans-serif;
   color: #4FC3F7;
@@ -232,6 +231,13 @@ body {
 .welcome-banner-right.show {
   opacity: 1;
   transform: translateX(0);
+}
+
+/* Extra banner slots stack below the first */
+.welcome-banner-extra {
+  max-width: 18vw;
+  min-width: 200px;
+  padding: 1.2vh 1.4vw;
 }
 
 .welcome-badge-row {
