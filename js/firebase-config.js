@@ -12,13 +12,14 @@
 //
 // Full step-by-step instructions are in README.md.
    const firebaseConfig = {
-     apiKey: "YOUR_API_KEY",
-     authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-     databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app",
-     projectId: "YOUR_PROJECT_ID",
-     storageBucket: "YOUR_PROJECT_ID.appspot.com",
-     messagingSenderId: "YOUR_SENDER_ID",
-     appId: "YOUR_APP_ID"
+     apiKey: "AIzaSyAxcywf5Ql9szynQaDfyRwy8OxhZZNdDsY",
+     authDomain: "qr-code-interactive-aaw.firebaseapp.com",
+     databaseURL: "https://qr-code-interactive-aaw-default-rtdb.asia-southeast1.firebasedatabase.app",
+     projectId: "qr-code-interactive-aaw",
+     storageBucket: "qr-code-interactive-aaw.firebasestorage.app",
+     messagingSenderId: "899801770146",
+     appId: "1:899801770146:web:d12c15216562e6adf70ffb",
+     measurementId: "G-G3XHFXGL5P"
    };
 
 firebase.initializeApp(firebaseConfig);
