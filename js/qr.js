@@ -10,11 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("qrUrlLabel").textContent = target;
 
+  // Responsive QR size: fill available width on mobile, capped at 380px on desktop
+  const qrSize = Math.min(380, Math.floor(window.innerWidth * 0.72));
+
   // eslint-disable-next-line no-undef
   new QRCode(document.getElementById("qrcode"), {
     text: target,
-    width: 420,
-    height: 420,
+    width: qrSize,
+    height: qrSize,
     colorDark: "#0A1628",
     colorLight: "#ffffff",
     correctLevel: QRCode.CorrectLevel.H
