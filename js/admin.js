@@ -80,7 +80,27 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       renderStats();
       renderEventState();
+
+      // Sync theme picker active state
+      const activeTheme = eventCache.syringeTheme || "blue";
+      const picker = document.getElementById("themePicker");
+      if (picker) {
+        picker.querySelectorAll(".theme-swatch").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.theme === activeTheme);
+        });
+      }
     });
+
+    // Theme picker click handler
+    const themePicker = document.getElementById("themePicker");
+    if (themePicker) {
+      themePicker.addEventListener("click", (e) => {
+        const btn = e.target.closest(".theme-swatch");
+        if (!btn) return;
+        const theme = btn.dataset.theme;
+        db.ref("event/syringeTheme").set(theme);
+      });
+    }
   }
 
   function activeParticipants() {

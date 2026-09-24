@@ -1,5 +1,5 @@
 // ============================================================
-// STAGE DISPLAY  –  v6
+// STAGE DISPLAY  –  v7
 // ============================================================
 document.addEventListener("DOMContentLoaded", () => {
   const CONFIG = window.AAW_CONFIG;
@@ -36,6 +36,34 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   Object.keys(colorVarMap).forEach((key) => {
     if (colors[key]) rootStyle.setProperty(colorVarMap[key], colors[key]);
+  });
+
+  // ---- Syringe colour theme (set from admin panel) ----
+  const SYRINGE_THEMES = {
+    blue:    { liquidTop: "#4FC3F7", liquidBottom: "#0B75C2", glow: "#29ABE2", accent: "#1FA37A" },
+    green:   { liquidTop: "#69F0AE", liquidBottom: "#00C853", glow: "#00E676", accent: "#1B5E20" },
+    red:     { liquidTop: "#FF8A80", liquidBottom: "#D32F2F", glow: "#FF5252", accent: "#B71C1C" },
+    purple:  { liquidTop: "#CE93D8", liquidBottom: "#7B1FA2", glow: "#AB47BC", accent: "#4A148C" },
+    orange:  { liquidTop: "#FFB74D", liquidBottom: "#E65100", glow: "#FF9800", accent: "#BF360C" },
+    teal:    { liquidTop: "#80CBC4", liquidBottom: "#00695C", glow: "#26A69A", accent: "#004D40" },
+    pink:    { liquidTop: "#F48FB1", liquidBottom: "#C2185B", glow: "#E91E63", accent: "#880E4F" },
+    yellow:  { liquidTop: "#FFF176", liquidBottom: "#F9A825", glow: "#FFEB3B", accent: "#F57F17" }
+  };
+
+  function applySyringeTheme(themeName) {
+    const theme = SYRINGE_THEMES[themeName];
+    if (!theme) return;
+    rootStyle.setProperty("--liquid-top", theme.liquidTop);
+    rootStyle.setProperty("--liquid-bottom", theme.liquidBottom);
+    rootStyle.setProperty("--glow", theme.glow);
+    rootStyle.setProperty("--accent", theme.accent);
+  }
+
+  db.ref("event/syringeTheme").on("value", (snap) => {
+    const theme = snap.val();
+    if (theme && SYRINGE_THEMES[theme]) {
+      applySyringeTheme(theme);
+    }
   });
 
   // ---- State ----
@@ -82,8 +110,10 @@ document.addEventListener("DOMContentLoaded", () => {
     return AAWUtils.clampPercentage((activeCount / targetParticipants) * 100);
   }
 
+  const FIREWORKS_DURATION_MS = 10000; // Fireworks last 10 seconds
   const CELEBRATION_DURATION_MS = Math.max(60000, (CONFIG.CELEBRATION_DURATION_SECONDS || 60) * 1000); // At least 1 minute
   let celebrationTimeoutHandle = null;
+  let fireworksTimeoutHandle = null;
 
   function applyPercent(percent) {
     setLiquidVisual(percent);
@@ -91,10 +121,24 @@ document.addEventListener("DOMContentLoaded", () => {
       hasCelebrated = true;
       startFireworks();
       celebrationEl.classList.add("show");
+
+      // Play celebration fanfare + firework crackling sounds
+      if (window.AAWSounds) {
+        AAWSounds.playCelebrationFanfare();
+        AAWSounds.startFireworkSounds();
+      }
+
+      // Stop fireworks visuals + sounds after 10 seconds
+      if (fireworksTimeoutHandle) clearTimeout(fireworksTimeoutHandle);
+      fireworksTimeoutHandle = setTimeout(() => {
+        stopFireworks();
+        if (window.AAWSounds) AAWSounds.stopFireworkSounds();
+      }, FIREWORKS_DURATION_MS);
+
+      // Keep celebration overlay text visible longer
       if (celebrationTimeoutHandle) clearTimeout(celebrationTimeoutHandle);
       celebrationTimeoutHandle = setTimeout(() => {
         celebrationEl.classList.remove("show");
-        stopFireworks();
       }, CELEBRATION_DURATION_MS);
     } else if (percent < 100 && hasCelebrated && !autoFillTriggered && !manualForced) {
       hasCelebrated = false;
@@ -102,8 +146,13 @@ document.addEventListener("DOMContentLoaded", () => {
         clearTimeout(celebrationTimeoutHandle);
         celebrationTimeoutHandle = null;
       }
+      if (fireworksTimeoutHandle) {
+        clearTimeout(fireworksTimeoutHandle);
+        fireworksTimeoutHandle = null;
+      }
       celebrationEl.classList.remove("show");
       stopFireworks();
+      if (window.AAWSounds) AAWSounds.stopFireworkSounds();
     }
   }
 
@@ -359,7 +408,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // ================================================================
   //  Name queue – slot-based: names appear immediately in free slots
   // ================================================================
-  function enqueueName(name) { nameQueue.push(name); processQueue(); }
+  function enqueueName(name, playSound) {
+    nameQueue.push({ name, playSound: !!playSound });
+    processQueue();
+  }
 
   function processQueue() {
     if (nameQueue.length === 0) return;
@@ -372,14 +424,18 @@ document.addEventListener("DOMContentLoaded", () => {
       const slot = bannerSlots[si];
       if (slot.timer !== null) continue;   // busy or already claimed
       slot.timer = -1;                     // sentinel: claimed, not yet showing
-      pending.push({ si, name: nameQueue.shift() });
+      pending.push({ si, entry: nameQueue.shift() });
     }
 
     // Show each claimed name with a small stagger so they don't all fire at once
-    pending.forEach(({ si, name }, i) => {
+    pending.forEach(({ si, entry }, i) => {
       setTimeout(() => {
-        showInSlot(si, name);
-        addNameTag(name);
+        showInSlot(si, entry.name);
+        addNameTag(entry.name);
+        // Play join chime for genuinely new participants (not initial load)
+        if (entry.playSound && window.AAWSounds) {
+          AAWSounds.playJoinChime();
+        }
       }, i * BANNER_STAGGER_MS);
     });
   }
@@ -678,20 +734,21 @@ document.addEventListener("DOMContentLoaded", () => {
         s.occupied = false;
       });
     } else if (!namesInitialized) {
-      // ---- FIX: enqueue ALL existing participants on first load ----
+      // ---- FIX: enqueue ALL existing participants on first load (no sound) ----
       const sorted = ids.slice().sort((a, b) => (data[a].timestamp || 0) - (data[b].timestamp || 0));
       sorted.forEach((id) => {
         knownParticipantIds.add(id);
-        if (data[id] && data[id].name) enqueueName(AAWUtils.escapeHTML(data[id].name));
+        if (data[id] && data[id].name) enqueueName(AAWUtils.escapeHTML(data[id].name), false);
       });
       namesInitialized = true;
     } else {
+      // New participants joining in real-time — play sound!
       const newIds = ids
         .filter((id) => !knownParticipantIds.has(id))
         .sort((a, b) => (data[a].timestamp || 0) - (data[b].timestamp || 0));
       newIds.forEach((id) => {
         knownParticipantIds.add(id);
-        if (data[id] && data[id].name) enqueueName(AAWUtils.escapeHTML(data[id].name));
+        if (data[id] && data[id].name) enqueueName(AAWUtils.escapeHTML(data[id].name), true);
       });
     }
 
@@ -720,6 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
       hasCelebrated = false;
       celebrationEl.classList.remove("show");
       stopFireworks();
+      if (window.AAWSounds) AAWSounds.stopFireworkSounds();
       paintRealtime();
       return;
     }
