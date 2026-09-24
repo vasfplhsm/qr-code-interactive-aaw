@@ -6,7 +6,7 @@
 // ============================================================
 window.AAW_CONFIG = {
   // Shown as the event name on the stage screen and participant page.
-  EVENT_NAME: "Antibiotic Awareness Week",
+  EVENT_NAME: "Minggu Kesedaran Kerintangan Antimikrobial Sedunia",
 
   // How many registrations count as "100% participation".
   TARGET_PARTICIPANTS: 100,

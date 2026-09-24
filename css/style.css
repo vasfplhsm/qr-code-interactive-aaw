@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700;800&family=Manrope:wght@500;700;800&family=Inter:wght@400;500;600&display=swap');
 
 :root {
   --clr-navy: #0A1628;
@@ -8,7 +8,7 @@
   --clr-paper: #F4F7FA;
   --clr-ink: #16232F;
   --clr-mist: #6b7a8c;
-  --font-head: 'Manrope', 'Segoe UI', sans-serif;
+  --font-head: 'Fredoka', 'Manrope', 'Segoe UI', sans-serif;
   --font-body: 'Inter', 'Segoe UI', sans-serif;
 }
 
@@ -47,18 +47,18 @@ body {
 
 .eyebrow {
   font-family: var(--font-head);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--clr-sky);
-  font-size: 13px;
-  letter-spacing: .06em;
+  font-size: 14px;
+  letter-spacing: .04em;
   margin: 0 0 6px;
 }
 
 .card h1 {
   font-family: var(--font-head);
-  font-weight: 800;
-  font-size: 26px;
-  line-height: 1.15;
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.18;
   color: var(--clr-navy);
   margin: 0 0 14px;
 }

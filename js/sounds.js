@@ -1,88 +1,239 @@
 // ============================================================
-// SOUND ENGINE  –  Web Audio API (no external audio files needed)
+// SOUND ENGINE  –  Web Audio API & Speech Synthesis
+// Zero external audio files required, runs 100% locally
 // ============================================================
 window.AAWSounds = (() => {
   let audioCtx = null;
+  let isAudioUnlocked = false;
+  const unlockListeners = [];
 
-  function ctx() {
+  function getAudioContext() {
     if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtx = new AudioContextClass();
+      }
     }
-    // Resume if suspended (browsers block autoplay until user gesture)
-    if (audioCtx.state === "suspended") audioCtx.resume();
+    if (audioCtx && audioCtx.state === "suspended") {
+      audioCtx.resume().catch(() => { });
+    }
     return audioCtx;
   }
 
-  // Ensure audio context is unlocked on first user interaction
-  function unlockAudio() {
-    ctx();
-    document.removeEventListener("click", unlockAudio);
-    document.removeEventListener("touchstart", unlockAudio);
-    document.removeEventListener("keydown", unlockAudio);
+  function primeAudio(ac) {
+    try {
+      const buffer = ac.createBuffer(1, 1, 22050);
+      const source = ac.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ac.destination);
+      source.start(0);
+    } catch (e) { }
   }
-  document.addEventListener("click", unlockAudio);
-  document.addEventListener("touchstart", unlockAudio);
-  document.addEventListener("keydown", unlockAudio);
+
+  function unlockAudio() {
+    const ac = getAudioContext();
+    if (!ac) return;
+
+    if (ac.state === "suspended") {
+      ac.resume().then(() => {
+        primeAudio(ac);
+        markUnlocked();
+      }).catch(() => { });
+    } else {
+      primeAudio(ac);
+      markUnlocked();
+    }
+  }
+
+  function markUnlocked() {
+    if (isAudioUnlocked) return;
+    isAudioUnlocked = true;
+    unlockListeners.forEach(cb => {
+      try { cb(); } catch (e) { }
+    });
+  }
+
+  // Listen to any user interaction to unlock browser autoplay policy
+  ["click", "touchstart", "touchend", "pointerdown", "keydown"].forEach((evt) => {
+    document.addEventListener(evt, () => {
+      unlockAudio();
+    }, { passive: true });
+  });
+
+  function onUnlock(callback) {
+    if (isAudioUnlocked) {
+      callback();
+    } else {
+      unlockListeners.push(callback);
+    }
+  }
+
+  function isUnlocked() {
+    return isAudioUnlocked && audioCtx && audioCtx.state === "running";
+  }
 
   // ================================================================
-  //  1) Participant join chime — pleasant ascending bell tone
+  //  0) Test tone — quick pleasant confirmation chime
   // ================================================================
-  function playJoinChime() {
-    const ac = ctx();
+  function playTestTone() {
+    unlockAudio();
+    const ac = getAudioContext();
+    if (!ac) return;
     const now = ac.currentTime;
 
-    // Two-note ascending chime (C5 → E5)
-    const notes = [523.25, 659.25];
+    const notes = [659.25, 783.99]; // E5, G5
+    notes.forEach((freq, i) => {
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + i * 0.1);
+
+      gain.gain.setValueAtTime(0, now + i * 0.1);
+      gain.gain.linearRampToValueAtTime(0.2, now + i * 0.1 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.35);
+
+      osc.connect(gain);
+      gain.connect(ac.destination);
+
+      osc.start(now + i * 0.1);
+      osc.stop(now + i * 0.1 + 0.4);
+    });
+  }
+
+  // ================================================================
+  //  1) Subtle typing click for input field
+  // ================================================================
+  let lastKeyClickTime = 0;
+  function playKeyClick() {
+    const nowMs = Date.now();
+    if (nowMs - lastKeyClickTime < 45) return; // limit rapid bursts
+    lastKeyClickTime = nowMs;
+
+    unlockAudio();
+    const ac = getAudioContext();
+    if (!ac) return;
+    const now = ac.currentTime;
+
+    const osc = ac.createOscillator();
+    const gain = ac.createGain();
+    const filter = ac.createBiquadFilter();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(500 + Math.random() * 200, now);
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(1400, now);
+
+    gain.gain.setValueAtTime(0.08, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ac.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.04);
+  }
+
+  // ================================================================
+  //  2) Participant join chime — vibrant 3-note ascending bell chime
+  // ================================================================
+  function playJoinChime() {
+    unlockAudio();
+    const ac = getAudioContext();
+    if (!ac) return;
+    const now = ac.currentTime;
+
+    // Three-note ascending bell chime: C5 (523.25) -> E5 (659.25) -> G5 (783.99)
+    const notes = [523.25, 659.25, 783.99];
     notes.forEach((freq, i) => {
       const osc = ac.createOscillator();
       const gain = ac.createGain();
       const filter = ac.createBiquadFilter();
 
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.setValueAtTime(freq, now + i * 0.11);
 
       filter.type = "lowpass";
-      filter.frequency.setValueAtTime(3000, now);
+      filter.frequency.setValueAtTime(3500, now + i * 0.11);
 
-      gain.gain.setValueAtTime(0, now + i * 0.12);
-      gain.gain.linearRampToValueAtTime(0.25, now + i * 0.12 + 0.04);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.5);
+      gain.gain.setValueAtTime(0, now + i * 0.11);
+      gain.gain.linearRampToValueAtTime(0.35, now + i * 0.11 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.11 + 0.55);
 
       osc.connect(filter);
       filter.connect(gain);
       gain.connect(ac.destination);
 
-      osc.start(now + i * 0.12);
-      osc.stop(now + i * 0.12 + 0.55);
+      osc.start(now + i * 0.11);
+      osc.stop(now + i * 0.11 + 0.6);
     });
 
-    // Soft shimmer layer
+    // High sparkling overtone
     const shimmer = ac.createOscillator();
     const shimGain = ac.createGain();
-    shimmer.type = "triangle";
-    shimmer.frequency.setValueAtTime(1318.5, now); // E6
-    shimGain.gain.setValueAtTime(0, now);
-    shimGain.gain.linearRampToValueAtTime(0.06, now + 0.08);
-    shimGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+    shimmer.type = "sine";
+    shimmer.frequency.setValueAtTime(1567.98, now + 0.22); // G6
+    shimGain.gain.setValueAtTime(0, now + 0.22);
+    shimGain.gain.linearRampToValueAtTime(0.12, now + 0.26);
+    shimGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
     shimmer.connect(shimGain);
     shimGain.connect(ac.destination);
-    shimmer.start(now + 0.06);
-    shimmer.stop(now + 0.65);
+    shimmer.start(now + 0.22);
+    shimmer.stop(now + 0.85);
   }
 
   // ================================================================
-  //  2) Celebration fanfare — triumphant brass-like chord progression
+  //  3) Spoken celebration voice announcement (SpeechSynthesis)
+  // ================================================================
+  function speakCelebration(message) {
+    if (!('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const phrase = message || "Congratulations! 100 percent participation reached! Thank you for you participation!";
+      const utterance = new SpeechSynthesisUtterance(phrase);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.15;
+      utterance.volume = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        const preferred = voices.find(v =>
+          v.lang.startsWith("en") &&
+          (v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Samantha") || v.name.includes("Daniel") || v.default)
+        );
+        if (preferred) utterance.voice = preferred;
+      }
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn("Speech synthesis error:", e);
+    }
+  }
+
+  // Ensure speech synthesis voices are preloaded
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    } catch (e) { }
+  }
+
+  // ================================================================
+  //  4) Celebration fanfare — triumphant brass chords, cymbal & bells
   // ================================================================
   function playCelebrationFanfare() {
-    const ac = ctx();
+    unlockAudio();
+    const ac = getAudioContext();
+    if (!ac) return;
     const now = ac.currentTime;
 
-    // Fanfare chord: C major → G major → C major (triumphant)
+    // Fanfare chord sequence
     const chords = [
-      { notes: [261.63, 329.63, 392.00, 523.25], time: 0,   dur: 0.5 },
-      { notes: [293.66, 369.99, 440.00, 587.33], time: 0.4, dur: 0.5 },
-      { notes: [329.63, 415.30, 523.25, 659.25], time: 0.8, dur: 0.8 },
-      { notes: [392.00, 493.88, 587.33, 783.99], time: 1.3, dur: 1.2 },
+      { notes: [261.63, 329.63, 392.00, 523.25], time: 0, dur: 0.45 },
+      { notes: [293.66, 369.99, 440.00, 587.33], time: 0.35, dur: 0.45 },
+      { notes: [329.63, 415.30, 523.25, 659.25], time: 0.7, dur: 0.7 },
+      { notes: [392.00, 493.88, 587.33, 783.99], time: 1.15, dur: 1.4 },
     ];
 
     chords.forEach(({ notes, time, dur }) => {
@@ -91,17 +242,16 @@ window.AAWSounds = (() => {
         const gain = ac.createGain();
         const filter = ac.createBiquadFilter();
 
-        // Sawtooth for brassy tone
         osc.type = "sawtooth";
         osc.frequency.setValueAtTime(freq, now + time);
 
         filter.type = "lowpass";
-        filter.frequency.setValueAtTime(2000 + freq, now + time);
-        filter.Q.setValueAtTime(1, now + time);
+        filter.frequency.setValueAtTime(2400 + freq, now + time);
+        filter.Q.setValueAtTime(1.2, now + time);
 
         gain.gain.setValueAtTime(0, now + time);
-        gain.gain.linearRampToValueAtTime(0.08, now + time + 0.05);
-        gain.gain.setValueAtTime(0.08, now + time + dur * 0.6);
+        gain.gain.linearRampToValueAtTime(0.12, now + time + 0.04);
+        gain.gain.setValueAtTime(0.12, now + time + dur * 0.6);
         gain.gain.exponentialRampToValueAtTime(0.001, now + time + dur);
 
         osc.connect(filter);
@@ -114,88 +264,111 @@ window.AAWSounds = (() => {
     });
 
     // Cymbal crash (white noise burst)
-    const bufSize = ac.sampleRate * 2;
-    const noiseBuf = ac.createBuffer(1, bufSize, ac.sampleRate);
-    const output = noiseBuf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) output[i] = Math.random() * 2 - 1;
+    try {
+      const bufSize = ac.sampleRate * 2;
+      const noiseBuf = ac.createBuffer(1, bufSize, ac.sampleRate);
+      const output = noiseBuf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) output[i] = Math.random() * 2 - 1;
 
-    const noise = ac.createBufferSource();
-    noise.buffer = noiseBuf;
-    const noiseGain = ac.createGain();
-    const noiseFilter = ac.createBiquadFilter();
-    noiseFilter.type = "highpass";
-    noiseFilter.frequency.setValueAtTime(7000, now);
-    noiseGain.gain.setValueAtTime(0, now + 1.3);
-    noiseGain.gain.linearRampToValueAtTime(0.12, now + 1.35);
-    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(ac.destination);
-    noise.start(now + 1.3);
-    noise.stop(now + 3.6);
+      const noise = ac.createBufferSource();
+      noise.buffer = noiseBuf;
+      const noiseGain = ac.createGain();
+      const noiseFilter = ac.createBiquadFilter();
+      noiseFilter.type = "highpass";
+      noiseFilter.frequency.setValueAtTime(6500, now);
+      noiseGain.gain.setValueAtTime(0, now + 1.15);
+      noiseGain.gain.linearRampToValueAtTime(0.18, now + 1.2);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 3.2);
+      noise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(ac.destination);
+      noise.start(now + 1.15);
+      noise.stop(now + 3.3);
+    } catch (e) { }
 
     // Final triumphant bell
     setTimeout(() => {
-      const bell = ac.createOscillator();
-      const bellGain = ac.createGain();
+      if (!audioCtx) return;
+      const t = audioCtx.currentTime;
+      const bell = audioCtx.createOscillator();
+      const bellGain = audioCtx.createGain();
       bell.type = "sine";
-      bell.frequency.setValueAtTime(1046.5, ac.currentTime); // C6
-      bellGain.gain.setValueAtTime(0.2, ac.currentTime);
-      bellGain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 2.5);
+      bell.frequency.setValueAtTime(1046.5, t); // C6
+      bellGain.gain.setValueAtTime(0.28, t);
+      bellGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
       bell.connect(bellGain);
-      bellGain.connect(ac.destination);
-      bell.start(ac.currentTime);
-      bell.stop(ac.currentTime + 2.6);
-    }, 2000);
+      bellGain.connect(audioCtx.destination);
+      bell.start(t);
+      bell.stop(t + 2.6);
+    }, 1800);
+
+    // Speak joyful congratulations announcement after fanfare intro
+    setTimeout(() => {
+      speakCelebration("Congratulations! 100 percent participation reached! Thank you for your participation!");
+    }, 1200);
   }
 
   // ================================================================
-  //  3) Firework pop / crackle sounds
+  //  5) Firework pop / crackle sounds
   // ================================================================
   let fireworkSoundInterval = null;
 
   function playFireworkPop() {
-    const ac = ctx();
+    const ac = getAudioContext();
+    if (!ac) return;
     const now = ac.currentTime;
 
-    // Short noise burst (pop)
-    const bufSize = Math.floor(ac.sampleRate * 0.15);
-    const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
-    const data = buf.getChannelData(0);
-    for (let i = 0; i < bufSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.15));
-    }
+    try {
+      const bufSize = Math.floor(ac.sampleRate * 0.16);
+      const buf = ac.createBuffer(1, bufSize, ac.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufSize * 0.18));
+      }
 
-    const source = ac.createBufferSource();
-    source.buffer = buf;
-    const gain = ac.createGain();
-    const filter = ac.createBiquadFilter();
+      const source = ac.createBufferSource();
+      source.buffer = buf;
+      const gain = ac.createGain();
+      const filter = ac.createBiquadFilter();
 
-    // Randomize pitch by changing the filter
-    filter.type = "bandpass";
-    filter.frequency.setValueAtTime(800 + Math.random() * 2400, now);
-    filter.Q.setValueAtTime(0.5 + Math.random() * 2, now);
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(600 + Math.random() * 2600, now);
+      filter.Q.setValueAtTime(0.7 + Math.random() * 2, now);
 
-    gain.gain.setValueAtTime(0.06 + Math.random() * 0.06, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      gain.gain.setValueAtTime(0.12 + Math.random() * 0.1, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
 
-    source.connect(filter);
-    filter.connect(gain);
-    gain.connect(ac.destination);
-    source.start(now);
-    source.stop(now + 0.15);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(ac.destination);
+      source.start(now);
+      source.stop(now + 0.16);
+
+      // Low boom layer for heavy rockets
+      if (Math.random() < 0.35) {
+        const boom = ac.createOscillator();
+        const boomGain = ac.createGain();
+        boom.type = "sine";
+        boom.frequency.setValueAtTime(140 + Math.random() * 60, now);
+        boom.frequency.exponentialRampToValueAtTime(40, now + 0.22);
+        boomGain.gain.setValueAtTime(0.18, now);
+        boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+        boom.connect(boomGain);
+        boomGain.connect(ac.destination);
+        boom.start(now);
+        boom.stop(now + 0.26);
+      }
+    } catch (e) { }
   }
 
   function startFireworkSounds() {
     if (fireworkSoundInterval) return;
-    // Play pop sounds at random intervals
     function scheduleNext() {
-      const delay = 200 + Math.random() * 500;
+      const delay = 180 + Math.random() * 420;
       fireworkSoundInterval = setTimeout(() => {
         playFireworkPop();
-        // Sometimes double-pop for crackle effect
-        if (Math.random() < 0.4) {
-          setTimeout(playFireworkPop, 30 + Math.random() * 70);
+        if (Math.random() < 0.5) {
+          setTimeout(playFireworkPop, 30 + Math.random() * 80);
         }
         if (fireworkSoundInterval !== null) scheduleNext();
       }, delay);
@@ -211,8 +384,14 @@ window.AAWSounds = (() => {
   }
 
   return {
+    unlockAudio,
+    isUnlocked,
+    onUnlock,
+    playTestTone,
+    playKeyClick,
     playJoinChime,
     playCelebrationFanfare,
+    speakCelebration,
     startFireworkSounds,
     stopFireworkSounds
   };

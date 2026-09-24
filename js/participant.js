@@ -70,6 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Play subtle keypress pop when typing name
+  nameInput.addEventListener("input", () => {
+    if (window.AAWSounds) window.AAWSounds.playKeyClick();
+  });
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     errorMsg.textContent = "";
@@ -105,6 +110,12 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       localStorage.setItem(ALREADY_KEY, name);
+
+      // Play joyful join chime right on participant's device
+      if (window.AAWSounds) {
+        window.AAWSounds.playJoinChime();
+      }
+
       showSuccess(name);
     } catch (err) {
       console.error(err);

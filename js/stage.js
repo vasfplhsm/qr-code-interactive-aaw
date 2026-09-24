@@ -18,9 +18,46 @@ document.addEventListener("DOMContentLoaded", () => {
   const fireworksCanvas = document.getElementById("fireworksCanvas");
   const syringeNameTags = document.getElementById("syringeNameTags");
 
-  eventTitleEl.textContent = CONFIG.EVENT_NAME;
+  eventTitleEl.innerHTML = `<span class="title-sparkle" aria-hidden="true"></span> <span>${CONFIG.EVENT_NAME}</span> <span class="title-sparkle" aria-hidden="true"></span>`;
   readyText.textContent = CONFIG.EVENT_START_MESSAGE;
   celebrationText.textContent = CONFIG.EVENT_COMPLETION_MESSAGE;
+
+  // ---- Audio activation UI pill ----
+  const soundPillBtn = document.getElementById("soundPillBtn");
+  const soundPillIcon = document.getElementById("soundPillIcon");
+  const soundPillLabel = document.getElementById("soundPillLabel");
+
+  function setAudioActiveUI() {
+    if (!soundPillBtn) return;
+    soundPillBtn.classList.remove("pulsing");
+    soundPillBtn.classList.add("unlocked");
+    if (soundPillIcon) soundPillIcon.textContent = "🔊";
+    if (soundPillLabel) soundPillLabel.textContent = "Sound Active ✓";
+    setTimeout(() => {
+      if (soundPillBtn) {
+        soundPillBtn.classList.add("compact");
+        if (soundPillLabel) soundPillLabel.textContent = "Sound ON";
+      }
+    }, 3000);
+  }
+
+  if (soundPillBtn) {
+    soundPillBtn.classList.add("pulsing");
+    soundPillBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (window.AAWSounds) {
+        window.AAWSounds.unlockAudio();
+        window.AAWSounds.playTestTone();
+      }
+      setAudioActiveUI();
+    });
+  }
+
+  if (window.AAWSounds) {
+    window.AAWSounds.onUnlock(() => {
+      setAudioActiveUI();
+    });
+  }
 
   // ---- Apply custom colours ----
   const rootStyle = document.documentElement.style;
@@ -89,9 +126,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const BANNER_STAGGER_MS = 400;    // delay between each banner popping in
   const bannerSlots = [];
 
-  // Syringe name-tag state – permanent pills on BOTH sides, up to 100
-  const MAX_NAME_TAGS = 100;
+  // Syringe name-tag state – permanent pills on BOTH sides, up to 200 (extra participants squeezed in)
+  const MAX_NAME_TAGS = 200;
   const tagSlots = [];     // array of {el}
+  let totalTagsPlaced = 0;
 
   const TOP_Y = 38;
   const BOTTOM_Y = 482;
@@ -300,13 +338,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ================================================================
-  //  Syringe name tags – permanent pills on BOTH sides (50 right, 50 left)
+  //  Syringe name tags – permanent pills on BOTH sides (up to 200)
   //  Alternates filling: even slots -> right, odd slots -> left
-  //  Scattered across 3 columns × 17 rows per side, strictly beside barrel
+  //  Scattered across 4 columns × 25 rows per side, beside barrel
+  //  If >100 participants join, tags squeeze gracefully into dense mode
   // ================================================================
   function initNameTagSlots() {
-    const COLS = 3;
-    const MAX_ROWS = 17;
+    const COLS = 4;
+    const MAX_ROWS = 25;
 
     for (let i = 0; i < MAX_NAME_TAGS; i++) {
       const el = document.createElement("div");
@@ -315,16 +354,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Alternate right and left sides
       const zone = (i % 2 === 0) ? "right" : "left";
-      const k = Math.floor(i / 2); // 0 .. 49 per side
+      const k = Math.floor(i / 2); // 0 .. 99 per side
 
       // Dispersed row & col using coprime strides (guaranteed 100% collision-free)
       let row, col;
       if (zone === "right") {
         row = (k * 7) % MAX_ROWS;
-        col = (k * 2) % COLS;
+        col = (k * 3) % COLS;
       } else {
-        row = (k * 7 + 9) % MAX_ROWS;
-        col = (k * 2 + 1) % COLS;
+        row = (k * 7 + 13) % MAX_ROWS;
+        col = (k * 3 + 1) % COLS;
       }
 
       // Two deterministic jitter axes (-1 … +1) for organic scattering
@@ -357,22 +396,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const jitter  = info.jitter;   // Y scatter axis (-1 … +1)
     const jitter2 = info.jitter2;  // X scatter axis (-1 … +1)
 
-    const COLS     = 3;
-    const MAX_ROWS = 17;
+    const COLS     = 4;
+    const MAX_ROWS = 25;
 
-    // Vertical: spread across 74% of syringe height, beside barrel (never covering % below)
-    const vSpread  = syrHeight * 0.74;
+    // Vertical: spread across 76% of syringe height, beside barrel (never covering % below)
+    const vSpread  = syrHeight * 0.76;
     const startY   = topEdge + syrHeight * 0.08;
     const rowStep  = MAX_ROWS > 1 ? vSpread / (MAX_ROWS - 1) : vSpread;
 
     // Subtle column stagger so adjacent columns interleave like bricks
-    const colYShift = col * (rowStep / COLS);
-    const tagY = startY + row * rowStep + colYShift + jitter * (rowStep * 0.12);
+    const colYShift = (col % 2) * (rowStep * 0.45);
+    const tagY = startY + row * rowStep + colYShift + jitter * (rowStep * 0.1);
 
     // Horizontal: columns step outwards from the syringe barrel neatly
-    const COL_STEP = 75;  // px between column centres
-    const BASE_X   = 12;  // px gap from syringe barrel to first column
-    const tagX = BASE_X + col * COL_STEP + jitter2 * 6;
+    const COL_STEP = 66;  // px between column centres
+    const BASE_X   = 10;  // px gap from syringe barrel to first column
+    const tagX = BASE_X + col * COL_STEP + jitter2 * 4;
 
     if (tagZone === "right") {
       el.style.left  = (barrelRightPx + tagX) + "px";
@@ -391,17 +430,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function addNameTag(name) {
-    const freeSlot = tagSlots.find(s => !s.occupied);
-    if (!freeSlot) return; // all 100 filled — ignore
+    totalTagsPlaced++;
+    // When participants exceed 100, squeeze tags compactly
+    if (totalTagsPlaced > 100) {
+      syringeNameTags.classList.add("dense-tags");
+    }
 
-    freeSlot.el.textContent = name;
-    freeSlot.occupied = true;
+    let slot = tagSlots.find(s => !s.occupied);
+    if (!slot) {
+      // If all 200 primary slots are filled, circular squeeze so no extra participant is left out
+      const recycleIndex = (totalTagsPlaced - 1) % MAX_NAME_TAGS;
+      slot = tagSlots[recycleIndex];
+    }
 
-    positionTagSlot(freeSlot.slotIndex, freeSlot.el);
+    slot.el.textContent = name;
+    slot.occupied = true;
+
+    positionTagSlot(slot.slotIndex, slot.el);
 
     // Animate new tag in
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => freeSlot.el.classList.add("visible"));
+      requestAnimationFrame(() => slot.el.classList.add("visible"));
     });
   }
 
@@ -729,6 +778,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (s.right) s.right.classList.remove("show");
       });
       // Clear all name tags
+      totalTagsPlaced = 0;
+      syringeNameTags.classList.remove("dense-tags");
       tagSlots.forEach(s => {
         s.el.classList.remove("visible");
         s.occupied = false;
