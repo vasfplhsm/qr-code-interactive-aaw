@@ -189,7 +189,7 @@ window.AAWSounds = (() => {
     if (!('speechSynthesis' in window)) return;
     try {
       window.speechSynthesis.cancel();
-      const phrase = message || "Congratulations! 100 percent participation reached! Thank you for you participation!";
+      const phrase = message || "Congratulations! 100 percent participation reached! Thank you for you contribution!";
       const utterance = new SpeechSynthesisUtterance(phrase);
       utterance.rate = 1.0;
       utterance.pitch = 1.15;
@@ -304,7 +304,7 @@ window.AAWSounds = (() => {
 
     // Speak joyful congratulations announcement after fanfare intro
     setTimeout(() => {
-      speakCelebration("Congratulations! 100 percent participation reached! Thank you for your participation!");
+      speakCelebration("Congratulations! 100 percent participation reached! Thank you for your contribution!");
     }, 1200);
   }
 

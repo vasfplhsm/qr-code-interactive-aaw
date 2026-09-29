@@ -6,7 +6,7 @@
 // ============================================================
 window.AAW_CONFIG = {
   // Shown as the event name on the stage screen and participant page.
-  EVENT_NAME: "Minggu Kesedaran Kerintangan Antimikrobial Sedunia",
+  EVENT_NAME: "World AMR Awareness Week 2026",
 
   // How many registrations count as "100% participation".
   TARGET_PARTICIPANTS: 100,
