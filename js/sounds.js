@@ -5,6 +5,7 @@
 window.AAWSounds = (() => {
   let audioCtx = null;
   let isAudioUnlocked = false;
+  let soundEnabled = true; // ON by default
   const unlockListeners = [];
 
   function getAudioContext() {
@@ -58,6 +59,34 @@ window.AAWSounds = (() => {
     document.addEventListener(evt, () => {
       unlockAudio();
     }, { passive: true });
+  });
+
+  // Try to turn sound on without needing a click. Browsers may still block
+  // this until the page has had one user interaction; in that case the very
+  // first click/tap/key anywhere on the page unlocks it (listeners above).
+  function autoEnable() {
+    soundEnabled = true;
+    const ac = getAudioContext();
+    if (!ac) return;
+    const finish = () => {
+      if (ac.state === "running") {
+        primeAudio(ac);
+        markUnlocked();
+      }
+    };
+    if (ac.state === "running") finish();
+    else ac.resume().then(finish).catch(() => { });
+  }
+
+  function setEnabled(v) { soundEnabled = !!v; }
+  function isEnabled() { return soundEnabled; }
+
+  // Keep retrying quietly in case the browser allows it (e.g. kiosk/autoplay flags)
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && soundEnabled && !isAudioUnlocked) autoEnable();
+  });
+  window.addEventListener("focus", () => {
+    if (soundEnabled && !isAudioUnlocked) autoEnable();
   });
 
   function onUnlock(callback) {
@@ -385,6 +414,9 @@ window.AAWSounds = (() => {
 
   return {
     unlockAudio,
+    autoEnable,
+    setEnabled,
+    isEnabled,
     isUnlocked,
     onUnlock,
     playTestTone,

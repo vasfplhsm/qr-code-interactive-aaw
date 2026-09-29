@@ -41,8 +41,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 3000);
   }
 
-  if (soundPillBtn) {
+  // Sound is ON by default. If the browser has not yet allowed audio
+  // (needs one tap/click on the page), show a gentle hint instead.
+  function setAudioPendingUI() {
+    if (!soundPillBtn) return;
+    soundPillBtn.classList.remove("unlocked", "compact");
     soundPillBtn.classList.add("pulsing");
+    if (soundPillIcon) soundPillIcon.textContent = "🔊";
+    if (soundPillLabel) soundPillLabel.textContent = "Sound ON – tap anywhere once to allow";
+  }
+
+  if (soundPillBtn) {
+    setAudioPendingUI();
     soundPillBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       if (window.AAWSounds) {
@@ -57,6 +67,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.AAWSounds.onUnlock(() => {
       setAudioActiveUI();
     });
+    // Auto-enable sound as soon as the stage loads
+    window.AAWSounds.autoEnable();
   }
 
   // ---- Apply custom colours ----
@@ -807,6 +819,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ---- Firebase: event ----
+  let wasEventStarted = false;
   db.ref("event").on("value", (snapshot) => {
     const data = snapshot.val() || {};
     targetParticipants = data.targetParticipants || CONFIG.TARGET_PARTICIPANTS;
@@ -819,6 +832,12 @@ document.addEventListener("DOMContentLoaded", () => {
       ? data.autoFillStartPercentage : 0;
 
     readyOverlay.classList.toggle("show", !eventStarted);
+
+    // Auto-enable sound the moment the event starts (no manual toggle needed)
+    if (eventStarted && !wasEventStarted && window.AAWSounds) {
+      AAWSounds.autoEnable();
+    }
+    wasEventStarted = eventStarted;
 
     if (!eventStarted) {
       autoFillTriggered = false;
