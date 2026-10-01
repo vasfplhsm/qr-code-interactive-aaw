@@ -22,6 +22,22 @@ document.addEventListener("DOMContentLoaded", () => {
   readyText.textContent = CONFIG.EVENT_START_MESSAGE;
   celebrationText.textContent = CONFIG.EVENT_COMPLETION_MESSAGE;
 
+  // ---- Auto full screen: the first click anywhere on the stage enters
+  // full screen (browsers only allow this after a user click). Press F to toggle.
+  function enterFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement) return;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) { try { const r = req.call(el); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+  }
+  document.addEventListener("click", enterFullscreen, { capture: true, once: true });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "f" || e.key === "F") {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else enterFullscreen();
+    }
+  });
+
   // ---- Audio activation UI pill ----
   const soundPillBtn = document.getElementById("soundPillBtn");
   const soundPillIcon = document.getElementById("soundPillIcon");
@@ -48,7 +64,7 @@ document.addEventListener("DOMContentLoaded", () => {
     soundPillBtn.classList.remove("unlocked", "compact");
     soundPillBtn.classList.add("pulsing");
     if (soundPillIcon) soundPillIcon.textContent = "🔊";
-    if (soundPillLabel) soundPillLabel.textContent = "Sound ON – tap anywhere once to allow";
+    if (soundPillLabel) soundPillLabel.textContent = "Click anywhere once – full screen + sound";
   }
 
   if (soundPillBtn) {
@@ -131,9 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const knownParticipantIds = new Set();
   let namesInitialized = false;
 
-  // Banner cycling: we show BANNER_BATCH names simultaneously,
-  // 5 slots on left, 5 slots on right
-  const BANNER_BATCH = 10;           // names shown at once
+  // Banner cycling: 3 big popups on the left, 3 on the right (6 total)
+  const BANNER_BATCH = 6;            // names shown at once
   const BANNER_DURATION_MS = (CONFIG.NAME_DISPLAY_DURATION_SECONDS || 3) * 1000;
   const BANNER_STAGGER_MS = 400;    // delay between each banner popping in
   const bannerSlots = [];
@@ -272,9 +287,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // ================================================================
   function createBannerSlot(index) {
     const side = (index % 2 === 0) ? "left" : "right";
-    const row = Math.floor(index / 2); // 0 .. 4
-    // Left starts at 12vh, Right starts at 14vh; step 16vh down (max row 4 is at 76vh / 78vh)
-    const topVh = (side === "left" ? 12 : 14) + row * 16;
+    const row = Math.floor(index / 2); // 0 .. 2
+    // 3 rows per side, 26vh apart, starting at 14vh (large banners)
+    const topVh = 14 + row * 26;
 
     if (index === 0) {
       bannerLeft.style.top = topVh + "vh";
@@ -350,92 +365,104 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ================================================================
-  //  Syringe name tags – permanent pills on BOTH sides (up to 200)
-  //  Alternates filling: even slots -> right, odd slots -> left
-  //  Scattered across 4 columns × 25 rows per side, beside barrel
-  //  If >100 participants join, tags squeeze gracefully into dense mode
+  //  Name tags – fill the screen on BOTH sides of the syringe.
+  //  Each side is split into a grid; every tag owns one cell so tags
+  //  never overlap. Cell size / font size adapt to the screen and the
+  //  target number of participants. Cells are filled in a scattered
+  //  order so the screen fills evenly instead of top-to-bottom.
   // ================================================================
-  function initNameTagSlots() {
-    const COLS = 4;
-    const MAX_ROWS = 25;
+  let layoutCap = 0;
+  let cells = { left: [], right: [] };
+  let cellFont = 16;
+  let cellGap = 8;
 
+  function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+
+  function computeLayout() {
+    const cap = Math.min(MAX_NAME_TAGS, Math.max(10, targetParticipants || 100, totalTagsPlaced));
+    layoutCap = cap;
+    const perSide = Math.ceil(cap / 2);
+
+    const svgEl = document.getElementById("syringeSvg");
+    const headerEl = document.querySelector(".stage-header");
+    const svgRect = svgEl.getBoundingClientRect();
+    const hdrBottom = headerEl ? headerEl.getBoundingClientRect().bottom : 0;
+
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const margin = vw * 0.015;
+    const top = hdrBottom + vh * 0.015;
+    const bottom = vh - vh * 0.025;
+    const H = bottom - top;
+    const leftW = svgRect.left - margin * 2;          // left region width
+    const rightX = svgRect.right + margin;            // right region start
+    const rightW = vw - margin - rightX;
+    const W = Math.min(leftW, rightW);
+    if (W <= 50 || H <= 50) return;
+
+    cellGap = Math.max(6, vh * 0.008);
+    const maxFont = vh * 0.05;
+
+    // Choose the column count that gives the biggest readable font
+    let best = null;
+    for (let cols = 1; cols <= 6; cols++) {
+      const rows = Math.ceil(perSide / cols);
+      const w = W / cols, h = H / rows;
+      const font = Math.min((h - cellGap) * 0.55, (w - cellGap) / 9, maxFont);
+      if (!best || font > best.font) best = { cols, rows, w, h, font };
+    }
+    cellFont = Math.max(10, best.font);
+
+    // Build cell lists (row-major), then scatter them with a coprime stride
+    function buildCells(originX) {
+      const list = [];
+      for (let r = 0; r < best.rows; r++) {
+        for (let c = 0; c < best.cols; c++) {
+          list.push({ x: originX + c * best.w, y: top + r * best.h, w: best.w, h: best.h });
+        }
+      }
+      let stride = Math.max(1, Math.round(list.length * 0.618));
+      while (gcd(stride, list.length) !== 1) stride++;
+      const out = [];
+      for (let k = 0; k < list.length; k++) out.push(list[(k * stride) % list.length]);
+      return out;
+    }
+    cells.left = buildCells(margin);
+    cells.right = buildCells(rightX);
+  }
+
+  function initNameTagSlots() {
     for (let i = 0; i < MAX_NAME_TAGS; i++) {
       const el = document.createElement("div");
       el.className = "syringe-name-tag";
       syringeNameTags.appendChild(el);
-
-      // Alternate right and left sides
       const zone = (i % 2 === 0) ? "right" : "left";
-      const k = Math.floor(i / 2); // 0 .. 99 per side
-
-      // Dispersed row & col using coprime strides (guaranteed 100% collision-free)
-      let row, col;
-      if (zone === "right") {
-        row = (k * 7) % MAX_ROWS;
-        col = (k * 3) % COLS;
-      } else {
-        row = (k * 7 + 13) % MAX_ROWS;
-        col = (k * 3 + 1) % COLS;
-      }
-
-      // Two deterministic jitter axes (-1 … +1) for organic scattering
-      const jitter  = (((i * 7  + 3) % 20) - 10) / 10;
-      const jitter2 = (((i * 11 + 5) % 20) - 10) / 10;
-
-      tagSlots.push({ slotIndex: i, el, occupied: false, zone, row, col, jitter, jitter2 });
+      tagSlots.push({ slotIndex: i, el, occupied: false, zone, k: Math.floor(i / 2) });
     }
     window.addEventListener("resize", repositionAllTags);
   }
 
   function positionTagSlot(index, el) {
-    const svgEl   = document.getElementById("syringeSvg");
-    const zoneEl  = document.querySelector(".syringe-zone");
-    const svgRect  = svgEl  ? svgEl.getBoundingClientRect()  : null;
-    const zoneRect = zoneEl ? zoneEl.getBoundingClientRect() : null;
-    if (!svgRect || !zoneRect) return;
-
-    // Accurate barrel coordinates within the SVG viewBox (0 0 260 590):
-    // Barrel is x=60 to x=200 out of width 260
-    const barrelLeftPx  = (svgRect.left - zoneRect.left) + (60 / 260) * svgRect.width;
-    const barrelRightPx = (svgRect.left - zoneRect.left) + (200 / 260) * svgRect.width;
-    const topEdge       = svgRect.top - zoneRect.top;
-    const syrHeight     = svgRect.height;
-
-    const info    = tagSlots[index];
-    const tagZone = info.zone;
-    const row     = info.row;
-    const col     = info.col;
-    const jitter  = info.jitter;   // Y scatter axis (-1 … +1)
-    const jitter2 = info.jitter2;  // X scatter axis (-1 … +1)
-
-    const COLS     = 4;
-    const MAX_ROWS = 25;
-
-    // Vertical: spread across 76% of syringe height, beside barrel (never covering % below)
-    const vSpread  = syrHeight * 0.76;
-    const startY   = topEdge + syrHeight * 0.08;
-    const rowStep  = MAX_ROWS > 1 ? vSpread / (MAX_ROWS - 1) : vSpread;
-
-    // Subtle column stagger so adjacent columns interleave like bricks
-    const colYShift = (col % 2) * (rowStep * 0.45);
-    const tagY = startY + row * rowStep + colYShift + jitter * (rowStep * 0.1);
-
-    // Horizontal: columns step outwards from the syringe barrel neatly
-    const COL_STEP = 66;  // px between column centres
-    const BASE_X   = 10;  // px gap from syringe barrel to first column
-    const tagX = BASE_X + col * COL_STEP + jitter2 * 4;
-
-    if (tagZone === "right") {
-      el.style.left  = (barrelRightPx + tagX) + "px";
-      el.style.right = "";
-    } else {
-      el.style.left  = "";
-      el.style.right = (zoneRect.width - barrelLeftPx + tagX) + "px";
+    const info = tagSlots[index];
+    const list = cells[info.zone];
+    if (!list.length) return;
+    const cell = list[info.k % list.length];
+    const wPx = cell.w - cellGap;
+    const hPx = cell.h - cellGap;
+    el.style.left = (cell.x + cellGap / 2) + "px";
+    el.style.top = (cell.y + cellGap / 2) + "px";
+    el.style.width = wPx + "px";
+    el.style.height = hPx + "px";
+    el.style.lineHeight = (hPx - 4) + "px";
+    el.style.fontSize = cellFont + "px";
+    // Shrink long names so the full name fits inside its cell
+    if (el.scrollWidth > el.clientWidth) {
+      const f = Math.max(9, cellFont * (el.clientWidth / el.scrollWidth) * 0.96);
+      el.style.fontSize = f + "px";
     }
-    el.style.top = tagY + "px";
   }
 
   function repositionAllTags() {
+    computeLayout();
     tagSlots.forEach((slot, i) => {
       if (slot.occupied) positionTagSlot(i, slot.el);
     });
@@ -443,14 +470,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function addNameTag(name) {
     totalTagsPlaced++;
-    // When participants exceed 100, squeeze tags compactly
-    if (totalTagsPlaced > 100) {
-      syringeNameTags.classList.add("dense-tags");
-    }
 
     let slot = tagSlots.find(s => !s.occupied);
     if (!slot) {
-      // If all 200 primary slots are filled, circular squeeze so no extra participant is left out
+      // All slots used: recycle so nobody is left out
       const recycleIndex = (totalTagsPlaced - 1) % MAX_NAME_TAGS;
       slot = tagSlots[recycleIndex];
     }
@@ -458,9 +481,11 @@ document.addEventListener("DOMContentLoaded", () => {
     slot.el.textContent = name;
     slot.occupied = true;
 
-    positionTagSlot(slot.slotIndex, slot.el);
+    // Re-compute the grid when the participant count outgrows it
+    const wantedCap = Math.min(MAX_NAME_TAGS, Math.max(10, targetParticipants || 100, totalTagsPlaced));
+    if (wantedCap !== layoutCap) repositionAllTags();
+    else positionTagSlot(slot.slotIndex, slot.el);
 
-    // Animate new tag in
     requestAnimationFrame(() => {
       requestAnimationFrame(() => slot.el.classList.add("visible"));
     });
@@ -791,7 +816,6 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       // Clear all name tags
       totalTagsPlaced = 0;
-      syringeNameTags.classList.remove("dense-tags");
       tagSlots.forEach(s => {
         s.el.classList.remove("visible");
         s.occupied = false;

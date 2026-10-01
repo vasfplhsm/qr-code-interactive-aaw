@@ -205,29 +205,30 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* ---- Syringe name tags (beside the syringe) ---- */
+/* ---- Name tags that fill the screen on both sides of the syringe ----
+   Position, size and font-size are calculated in stage.js (grid layout),
+   so tags never overlap and always use the available space. */
 .syringe-name-tags {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  position: fixed;
+  inset: 0;
   pointer-events: none;
   z-index: 3;
-  overflow: visible;
 }
 
 .syringe-name-tag {
   position: absolute;
+  box-sizing: border-box;
   background: rgba(10, 22, 40, 0.88);
-  border: 1.5px solid var(--liquid-top, #4FC3F7);
+  border: 2px solid var(--liquid-top, #4FC3F7);
   border-radius: 999px;
-  padding: .35vh .85vw;
-  font-size: 1.15vh;
+  padding: 0 14px;
+  text-align: center;
   font-weight: 700;
   font-family: 'Fredoka', 'Inter', sans-serif;
   color: var(--liquid-top, #4FC3F7);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   opacity: 0;
   transform: scale(0.7);
   transition: opacity .35s ease, transform .35s cubic-bezier(.34, 1.56, .64, 1), border-color .4s ease, color .4s ease, box-shadow .4s ease;
@@ -240,38 +241,28 @@ body {
   transform: scale(1);
 }
 
-/* Squeeze mode: when participants exceed 100, gracefully scale tags */
-.syringe-name-tags.dense-tags .syringe-name-tag {
-  font-size: 0.95vh;
-  padding: .24vh .62vw;
-  border-width: 1.2px;
-}
-
-/* ---- Dual side welcome banners ---- */
+/* ---- Dual side welcome banners (3 per side, large for projector) ---- */
 .welcome-banner {
   position: absolute;
-  top: 12vh;
+  top: 14vh;
   z-index: 10;
-  text-align: left;
-  background: rgba(10, 22, 40, 0.92);
-  border: 1.5px solid var(--liquid-top, #4FC3F7);
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 24px var(--glow, rgba(41, 171, 226, 0.25));
-  border-radius: 14px;
-  padding: 0.9vh 1.2vw;
+  text-align: center;
+  background: rgba(10, 22, 40, 0.94);
+  border: 3px solid var(--liquid-top, #4FC3F7);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.6), 0 0 40px var(--glow, rgba(41, 171, 226, 0.35));
+  border-radius: 28px;
+  padding: 2vh 1.6vw 2.4vh;
   backdrop-filter: blur(12px);
-  width: 19vw;
-  max-width: 20vw;
-  min-width: 180px;
+  width: 28vw;
   box-sizing: border-box;
   pointer-events: none;
   opacity: 0;
   transition: border-color .4s ease, box-shadow .4s ease;
 }
 
-/* Left banner slides in from the left */
 .welcome-banner-left {
-  left: 3.5vw;
-  transform: translateX(-40px);
+  left: 2vw;
+  transform: translateX(-60px);
   transition: opacity .45s cubic-bezier(.2, .9, .3, 1), transform .45s cubic-bezier(.2, .9, .3, 1);
 }
 
@@ -280,10 +271,9 @@ body {
   transform: translateX(0);
 }
 
-/* Right banner slides in from the right */
 .welcome-banner-right {
-  right: 3.5vw;
-  transform: translateX(40px);
+  right: 2vw;
+  transform: translateX(60px);
   transition: opacity .45s cubic-bezier(.2, .9, .3, 1), transform .45s cubic-bezier(.2, .9, .3, 1);
 }
 
@@ -292,46 +282,39 @@ body {
   transform: translateX(0);
 }
 
-/* Extra banner slots */
-.welcome-banner-extra {
-  width: 19vw;
-  max-width: 20vw;
-  min-width: 180px;
-  padding: 0.9vh 1.2vw;
-}
-
 .welcome-badge-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 3px;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 1vh;
 }
 
 .welcome-sparkle {
-  font-size: 1.4vh;
+  font-size: 3vh;
   line-height: 1;
 }
 
 .welcome-label {
   margin: 0;
-  font-size: 1.1vh;
+  font-size: 2.6vh;
   font-weight: 700;
   color: var(--liquid-top, #4FC3F7);
   font-family: 'Fredoka', 'Manrope', sans-serif;
-  letter-spacing: .08em;
+  letter-spacing: .1em;
   text-transform: uppercase;
   transition: color .4s ease;
 }
 
 .welcome-name {
   margin: 0;
-  font-size: 2.2vh;
-  font-weight: 700;
+  font-size: 6.4vh;
+  font-weight: 800;
   font-family: 'Fredoka', 'Manrope', sans-serif;
   color: #FFFFFF;
-  line-height: 1.22;
+  line-height: 1.15;
   word-break: break-word;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6), 0 0 16px var(--glow, rgba(41, 171, 226, 0.35));
+  text-shadow: 0 3px 14px rgba(0, 0, 0, 0.6), 0 0 24px var(--glow, rgba(41, 171, 226, 0.4));
 }
 
 /* ---- Ready overlay ---- */

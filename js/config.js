@@ -14,15 +14,15 @@ window.AAW_CONFIG = {
   // Seconds after the organizer starts the event timer before the
   // stage syringe automatically finishes filling to 100%, IF the
   // real target has not been reached yet.
-  AUTO_FILL_DELAY_SECONDS: 60,
+  AUTO_FILL_DELAY_SECONDS: 90,
 
   // How many seconds the automatic fill animation takes to travel
   // from the current percentage up to 100%.
-  AUTO_FILL_DURATION_SECONDS: 20,
+  AUTO_FILL_DURATION_SECONDS: 30,
 
   // How long (in seconds) each participant's name stays on the
   // "Welcome" banner before the next name appears.
-  NAME_DISPLAY_DURATION_SECONDS: 4,
+  NAME_DISPLAY_DURATION_SECONDS: 2,
 
   // Longest name (in characters) accepted from the registration form.
   MAX_NAME_LENGTH: 40,
