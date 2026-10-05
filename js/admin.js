@@ -206,13 +206,39 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  const REAL_NAMES = [
+    "Muhammad Amir", "Nur Aisyah", "Ahmad Faris", "Siti Nurhaliza", "Danish Hakim",
+    "Nurin Sofea", "Muhammad Irfan", "Alya Syahirah", "Hakim Zulkifli", "Puteri Amani",
+    "Syafiq Azman", "Nur Izzati", "Amirul Hakim", "Aina Sofea", "Faizal Rahman",
+    "Nur Athirah", "Muhammad Haziq", "Farah Nabilah", "Adam Danish", "Qistina Aulia",
+    "Khairul Anwar", "Nur Shazwani", "Hafiz Firdaus", "Amira Imani", "Muhammad Aqil",
+    "Zara Aqeela", "Arif Hakimi", "Nur Alia", "Syazwan Hamdan", "Balqis Humaira",
+    "Fikri Haziq", "Hannah Sofea", "Muhammad Aiman", "Nur Syafiqah", "Rayyan Hakim",
+    "Aleesya Imani", "Azim Danial", "Nur Damia", "Faiz Harith", "Insyirah Amani",
+    "Muhammad Adam", "Ayra Qaisara", "Izzat Hakimi", "Nurin Alyssa", "Danish Irsyad",
+    "Yasmin Sofea", "Amir Hakim", "Qaisara Humaira", "Farhan Zikri", "Nur Maisarah",
+    "Muhammad Rayyan", "Aina Batrisyia", "Luqman Hakim", "Adriana Imani", "Syahmi Farhan",
+    "Nur Amirah", "Arham Zafran", "Alyssa Qaireen", "Iskandar Zulkarnain", "Damia Sofea",
+    "Muhammad Harith", "Nur Aqilah", "Zafran Hakimi", "Zara Humaira", "Akmal Firdaus",
+    "Irdina Aisyah", "Haikal Danish", "Nur Khadijah", "Afiq Haziq", "Tasha Imani",
+    "Muhammad Fayyad", "Sofea Qistina", "Irsyad Hakim", "Nur Amani", "Adam Firash",
+    "Aleena Qaireen", "Syazwan Hakim", "Maisarah Izzati", "Ariff Danish", "Nur Ezzati",
+    "Harith Zaim", "Aisyah Humaira", "Muhammad Ziyad", "Qaisara Alya", "Haziq Firdaus",
+    "Nur Shahirah", "Rayyan Zafrel", "Amirah Sofea", "Faris Aiman", "Iman Aleesya",
+    "Muhammad Danish", "Nur Balqis", "Zikri Hakim", "Ayra Sofea", "Amirul Syafiq",
+    "Nur Haneesya", "Fawwaz Hakim", "Aqeela Imani", "Muhammad Afiq", "Nabila Syahirah"
+  ];
+  let _nameIndex = 0;
+
   function simulateAdd(count) {
     const updates = {};
     for (let i = 0; i < count; i++) {
       const key = db.ref("participants").push().key;
+      const name = REAL_NAMES[_nameIndex % REAL_NAMES.length];
+      _nameIndex++;
       updates[key] = {
-        name: "Test Participant " + Math.floor(Math.random() * 10000),
-        timestamp: Date.now(),
+        name,
+        timestamp: Date.now() + i,
         status: "active",
         deviceId: "test_" + key
       };

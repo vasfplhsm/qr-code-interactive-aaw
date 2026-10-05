@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const el = document.documentElement;
     if (document.fullscreenElement) return;
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) { try { const r = req.call(el); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+    if (req) { try { const r = req.call(el); if (r && r.catch) r.catch(() => { }); } catch (e) { } }
   }
   document.addEventListener("click", enterFullscreen, { capture: true, once: true });
   document.addEventListener("keydown", (e) => {
@@ -105,14 +105,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ---- Syringe colour theme (set from admin panel) ----
   const SYRINGE_THEMES = {
-    blue:    { liquidTop: "#4FC3F7", liquidBottom: "#0B75C2", glow: "#29ABE2", accent: "#1FA37A" },
-    green:   { liquidTop: "#69F0AE", liquidBottom: "#00C853", glow: "#00E676", accent: "#1B5E20" },
-    red:     { liquidTop: "#FF8A80", liquidBottom: "#D32F2F", glow: "#FF5252", accent: "#B71C1C" },
-    purple:  { liquidTop: "#CE93D8", liquidBottom: "#7B1FA2", glow: "#AB47BC", accent: "#4A148C" },
-    orange:  { liquidTop: "#FFB74D", liquidBottom: "#E65100", glow: "#FF9800", accent: "#BF360C" },
-    teal:    { liquidTop: "#80CBC4", liquidBottom: "#00695C", glow: "#26A69A", accent: "#004D40" },
-    pink:    { liquidTop: "#F48FB1", liquidBottom: "#C2185B", glow: "#E91E63", accent: "#880E4F" },
-    yellow:  { liquidTop: "#FFF176", liquidBottom: "#F9A825", glow: "#FFEB3B", accent: "#F57F17" }
+    blue: { liquidTop: "#4FC3F7", liquidBottom: "#0B75C2", glow: "#29ABE2", accent: "#1FA37A" },
+    green: { liquidTop: "#69F0AE", liquidBottom: "#00C853", glow: "#00E676", accent: "#1B5E20" },
+    red: { liquidTop: "#FF8A80", liquidBottom: "#D32F2F", glow: "#FF5252", accent: "#B71C1C" },
+    purple: { liquidTop: "#CE93D8", liquidBottom: "#7B1FA2", glow: "#AB47BC", accent: "#4A148C" },
+    orange: { liquidTop: "#FFB74D", liquidBottom: "#E65100", glow: "#FF9800", accent: "#BF360C" },
+    teal: { liquidTop: "#80CBC4", liquidBottom: "#00695C", glow: "#26A69A", accent: "#004D40" },
+    pink: { liquidTop: "#F48FB1", liquidBottom: "#C2185B", glow: "#E91E63", accent: "#880E4F" },
+    yellow: { liquidTop: "#FFF176", liquidBottom: "#F9A825", glow: "#FFEB3B", accent: "#F57F17" }
   };
 
   function applySyringeTheme(themeName) {
@@ -139,6 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let manualForced = false;
   let autoFillTriggered = false;
   let hasCelebrated = false;
+  let isResetting = false;
   let autoFillTimeoutHandle = null;
   let autoFillRAF = null;
   let animatingStartTime = null;
@@ -188,7 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
       celebrationEl.classList.add("show");
 
       // Play celebration fanfare + firework crackling sounds
-      if (window.AAWSounds) {
+      if (window.AAWSounds && !isResetting) {
         AAWSounds.playCelebrationFanfare();
         AAWSounds.startFireworkSounds();
       }
@@ -800,9 +801,13 @@ document.addEventListener("DOMContentLoaded", () => {
         clearTimeout(celebrationTimeoutHandle);
         celebrationTimeoutHandle = null;
       }
+      isResetting = true;
       hasCelebrated = false;
       celebrationEl.classList.remove("show");
       stopFireworks();
+      if (window.AAWSounds) AAWSounds.stopFireworkSounds();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      setTimeout(() => { isResetting = false; }, 500);
 
       knownParticipantIds.clear();
       namesInitialized = false;
@@ -811,7 +816,7 @@ document.addEventListener("DOMContentLoaded", () => {
       bannerSlots.forEach(s => {
         if (s.timer && s.timer !== -1) clearTimeout(s.timer);
         s.timer = null;
-        if (s.left)  s.left.classList.remove("show");
+        if (s.left) s.left.classList.remove("show");
         if (s.right) s.right.classList.remove("show");
       });
       // Clear all name tags
@@ -868,10 +873,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (autoFillTimeoutHandle) { clearTimeout(autoFillTimeoutHandle); autoFillTimeoutHandle = null; }
       if (autoFillRAF) { cancelAnimationFrame(autoFillRAF); autoFillRAF = null; }
       animatingStartTime = null;
+      isResetting = true;
       hasCelebrated = false;
       celebrationEl.classList.remove("show");
       stopFireworks();
       if (window.AAWSounds) AAWSounds.stopFireworkSounds();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      setTimeout(() => { isResetting = false; }, 500);
       paintRealtime();
       return;
     }
